@@ -2,7 +2,183 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/queue.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Co-Pilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee;
+      --surface: #faf8f5;
+      --border: #e8e3dc;
+      --text: #1a1a1a;
+      --muted: #888077;
+      --hint: #b8b0a5;
+      --accent-light: #f0ede8;
+      --success: #2d7a4f;
+      --warn: #a06b1a;
+      --danger: #c0392b;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header { padding: 16px 32px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .logo-mark { font-size: 18px; }
+    header h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    nav { margin-left: auto; display: flex; gap: 24px; }
+    .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; font-weight: 400; transition: color .15s; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active { color: var(--text); font-weight: 500; }
+
+    .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+
+    .greeting { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
+    .greeting-sub { font-size: 14px; color: var(--muted); margin-bottom: 40px; }
+
+    /* Stat row */
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 40px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); margin-bottom: 8px; }
+    .stat-value { font-size: 32px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+    .stat-value.warn { color: var(--warn); }
+    .stat-value.success { color: var(--success); }
+
+    /* Section */
+    .section { margin-bottom: 36px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); }
+    .section-link { font-size: 12px; color: var(--muted); text-decoration: none; }
+    .section-link:hover { color: var(--text); }
+
+    /* Capture rows */
+    .capture-list { display: flex; flex-direction: column; }
+    .capture-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit; transition: opacity .15s; }
+    .capture-row:last-child { border-bottom: 1px solid var(--border); }
+    .capture-row:hover { opacity: .7; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-needs-review { background: var(--warn); }
+    .dot-ready { background: var(--success); }
+    .dot-approved { background: var(--hint); }
+    .row-summary { font-size: 14px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .doc-tag { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    .row-time { font-size: 12px; color: var(--hint); }
+    .row-arrow { font-size: 11px; color: var(--hint); }
+
+    .empty { font-size: 14px; color: var(--hint); padding: 20px 0; }
+    .loading { font-size: 14px; color: var(--hint); padding: 20px 0; display: flex; align-items: center; gap: 8px; }
+    .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
-<body></body>
+<body>
+<header>
+  <span class="logo-mark">✦</span>
+  <h1>Data Co-Pilot</h1>
+  <nav>
+    <a class="nav-link active" href="/">Home</a>
+    <a class="nav-link" href="/queue.html">Review queue</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="greeting">Good <span id="timeOfDay">day</span>.</div>
+  <div class="greeting-sub">Here's where things stand.</div>
+
+  <div id="stats" class="stat-row">
+    <div class="stat-card"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>
+    <div class="stat-card"><div class="stat-label">Needs review</div><div class="stat-value warn" id="statReview">—</div></div>
+    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value success" id="statApproved">—</div></div>
+  </div>
+
+  <div class="section" id="flaggedSection">
+    <div class="section-header">
+      <span class="section-label">Flagged</span>
+      <a class="section-link" href="/queue.html?filter=needs_review">See all →</a>
+    </div>
+    <div id="flaggedList" class="loading"><div class="spinner"></div>Loading…</div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-label">Recent captures</span>
+      <a class="section-link" href="/queue.html">See all →</a>
+    </div>
+    <div id="recentList" class="loading"><div class="spinner"></div>Loading…</div>
+  </div>
+</div>
+
+<script>
+  const hour = new Date().getHours();
+  document.getElementById('timeOfDay').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+  function timeAgo(ts) {
+    const diff = Date.now() - new Date(ts);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  function dotClass(status) {
+    if (status === 'needs_review') return 'dot-needs-review';
+    if (status === 'approved') return 'dot-approved';
+    return 'dot-ready';
+  }
+
+  function rowHtml(c) {
+    const r = c.result_json || {};
+    return `
+      <a class="capture-row" href="/queue.html">
+        <span class="status-dot ${dotClass(c.status)}"></span>
+        <span class="row-summary">${r.summary || 'Untitled capture'}</span>
+        <div class="row-right">
+          <span class="doc-tag">${r.doc_type || '—'}</span>
+          <span class="row-time">${timeAgo(c.created_at)}</span>
+          <span class="row-arrow">→</span>
+        </div>
+      </a>`;
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('/api/queue');
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      const captures = data.captures || [];
+
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const thisWeek = captures.filter(c => new Date(c.created_at) > weekAgo);
+      const needsReview = captures.filter(c => c.status === 'needs_review');
+      const approved = captures.filter(c => c.status === 'approved');
+
+      document.getElementById('statTotal').textContent = thisWeek.length;
+      document.getElementById('statReview').textContent = needsReview.length;
+      document.getElementById('statApproved').textContent = approved.length;
+
+      const flaggedEl = document.getElementById('flaggedList');
+      if (needsReview.length) {
+        flaggedEl.innerHTML = `<div class="capture-list">${needsReview.slice(0, 5).map(rowHtml).join('')}</div>`;
+      } else {
+        flaggedEl.innerHTML = `<div class="empty">Nothing flagged — all clear.</div>`;
+      }
+
+      const recentEl = document.getElementById('recentList');
+      if (captures.length) {
+        recentEl.innerHTML = `<div class="capture-list">${captures.slice(0, 5).map(rowHtml).join('')}</div>`;
+      } else {
+        recentEl.innerHTML = `<div class="empty">No captures yet.</div>`;
+      }
+    } catch(e) {
+      document.getElementById('flaggedList').innerHTML = `<div class="empty" style="color:var(--danger)">${e.message}</div>`;
+      document.getElementById('recentList').innerHTML = '';
+    }
+  }
+
+  load();
+</script>
+</body>
 </html>
