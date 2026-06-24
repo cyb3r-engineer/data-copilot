@@ -405,11 +405,31 @@
     }, delay || 0);
   }
 
+  function createThumbnail(file) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
   async function handleUpload(file) {
     if (!file) return;
     document.getElementById('uploadBtn').classList.add('uploading');
     document.getElementById('captureZone').classList.add('busy');
     showToast('Uploading document…');
+    const thumb = await createThumbnail(file);
     try {
       const fd = new FormData();
       fd.append('image', file);
@@ -418,6 +438,9 @@
       const res = await fetch('/api/parse', { method: 'POST', body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
+      if (thumb && data.id) {
+        try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {}
+      }
       showToast('Added to review queue ✓', 'success');
       await load();
       hideToast(2500);

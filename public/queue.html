@@ -162,6 +162,41 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .empty-state { text-align: center; padding: 60px 20px; color: var(--hint); font-size: 14px; line-height: 1.7; }
     .empty-state a { color: var(--text); }
+
+    /* Document viewer modal */
+    .dv-backdrop { position: fixed; inset: 0; z-index: 400; background: rgba(10,10,10,.55); display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .dv-backdrop.open { opacity: 1; pointer-events: all; }
+    .dv-modal { background: var(--surface); border-radius: 16px; width: 100%; max-width: 1100px; height: 88vh; display: flex; flex-direction: column; overflow: hidden; transform: translateY(12px); transition: transform .22s cubic-bezier(0.22,1,0.36,1); }
+    .dv-backdrop.open .dv-modal { transform: translateY(0); }
+    .dv-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .dv-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dv-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--accent-light); border-radius: 6px; padding: 3px 8px; flex-shrink: 0; }
+    .dv-close { width: 30px; height: 30px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; line-height: 1; }
+    .dv-close:hover { border-color: var(--border-strong); color: var(--text); }
+    .dv-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+    /* Image panel */
+    .dv-image-panel { flex: 0 0 60%; border-right: 1px solid var(--border); background: #e8e3dc; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .dv-img-wrap { position: relative; display: inline-flex; }
+    .dv-img-wrap img { display: block; max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 4px; }
+    .dv-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .dv-no-image { text-align: center; color: var(--hint); font-size: 13px; line-height: 1.8; padding: 40px; }
+    .dv-no-image svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.2; margin-bottom: 16px; }
+    /* Fields panel */
+    .dv-fields-panel { flex: 1; overflow-y: auto; padding: 20px; }
+    .dv-fields-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 14px; }
+    .dv-field { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background .12s; margin-bottom: 4px; border: 1.5px solid transparent; }
+    .dv-field:hover { background: var(--accent-light); }
+    .dv-field.active { border-color: currentColor; }
+    .dv-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+    .dv-field-body { flex: 1; min-width: 0; }
+    .dv-field-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); margin-bottom: 2px; }
+    .dv-field-value { font-size: 13px; color: var(--text); line-height: 1.45; }
+    .dv-field.no-bbox { opacity: .6; cursor: default; }
+    .dv-section-sep { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin: 14px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+    @media (max-width: 700px) {
+      .dv-body { flex-direction: column; }
+      .dv-image-panel { flex: 0 0 50%; border-right: none; border-bottom: 1px solid var(--border); }
+    }
   </style>
 </head>
 <body>
@@ -375,6 +410,7 @@
         <button class="card-btn approve" onclick="updateCapture('${c.id}', 'approved')">Approve</button>
         <button class="card-btn flag" onclick="updateCapture('${c.id}', 'needs_review')">Flag for review</button>
         <button class="card-btn" onclick="updateCapture('${c.id}', 'ready')">Mark ready</button>
+        <button class="card-btn" onclick="openDocViewer('${c.id}')">View document</button>
       </div>`;
 
     return `
@@ -492,16 +528,39 @@
     }, delay || 0);
   }
 
+  function createThumbnail(file) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
   async function handleUpload(file) {
     if (!file) return;
     document.getElementById('uploadBtn').classList.add('uploading');
     showToast('Uploading document…');
+    const thumb = await createThumbnail(file);
     try {
       const fd = new FormData();
       fd.append('image', file);
       const res = await fetch('/api/parse', { method: 'POST', body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
+      if (thumb && data.id) {
+        try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {}
+      }
       showToast('Added to review queue ✓', 'success');
       await loadQueue();
       hideToast(2500);
@@ -513,6 +572,227 @@
   }
 
   loadQueue();
+
+  // ── Document viewer ──────────────────────────────────────────────────────────
+  const HIGHLIGHT_COLORS = [
+    '#2563eb','#16a34a','#d97706','#dc2626','#7c3aed',
+    '#0891b2','#be185d','#ea580c','#65a30d','#6366f1'
+  ];
+
+  function buildHighlights(r) {
+    // Use Gemini's highlights array if present, otherwise synthesise from result_json
+    if (r.highlights && r.highlights.length) return r.highlights;
+    const out = [];
+    if (r.date)        out.push({ label: 'Date',    value: r.date });
+    if (r.teacher)     out.push({ label: 'Teacher', value: r.teacher });
+    if (r.subject)     out.push({ label: 'Subject', value: r.subject });
+    if (r.class_group) out.push({ label: 'Class',   value: r.class_group });
+    (r.students || []).forEach(s => {
+      if (s.name)          out.push({ label: `${s.name} — name`,     value: s.name });
+      if (s.score)         out.push({ label: `${s.name} — score`,    value: s.score });
+      if (s.goal)          out.push({ label: `${s.name} — goal`,     value: s.goal });
+      if (s.goal_progress) out.push({ label: `${s.name} — progress`, value: s.goal_progress });
+      if (s.note)          out.push({ label: `${s.name} — note`,     value: s.note });
+    });
+    if (r.free_text) out.push({ label: 'Free text', value: r.free_text.slice(0, 80) + (r.free_text.length > 80 ? '…' : '') });
+    return out;
+  }
+
+  function openDocViewer(captureId) {
+    const capture = allCaptures.find(c => c.id === captureId);
+    if (!capture) return;
+    const r = capture.result_json || {};
+    const highlights = buildHighlights(r);
+    const imgSrc = (() => { try { return localStorage.getItem(`dc_img_${captureId}`); } catch(e) { return null; } })();
+
+    // Remove any existing modal
+    const existing = document.getElementById('dvBackdrop');
+    if (existing) existing.remove();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'dvBackdrop';
+    backdrop.className = 'dv-backdrop';
+    backdrop.innerHTML = `
+      <div class="dv-modal">
+        <div class="dv-header">
+          <span class="dv-title">${r.summary || 'Document preview'}</span>
+          ${r.doc_type ? `<span class="dv-badge">${r.doc_type}</span>` : ''}
+          <button class="dv-close" id="dvClose">✕</button>
+        </div>
+        <div class="dv-body">
+          <div class="dv-image-panel" id="dvImagePanel">
+            ${imgSrc
+              ? `<div class="dv-img-wrap" id="dvImgWrap"><img id="dvImg" src="${imgSrc}" alt="Document"></div>`
+              : `<div class="dv-no-image">
+                  <svg viewBox="0 0 48 48"><rect x="6" y="6" width="36" height="36" rx="4"/><path d="M6 32l10-10 8 8 6-6 12 12"/><circle cx="16" cy="18" r="3"/></svg>
+                  <div>No image stored for this capture.</div>
+                  <div style="font-size:11px;margin-top:6px">Images are saved when you upload<br>a document in this browser.</div>
+                </div>`
+            }
+          </div>
+          <div class="dv-fields-panel" id="dvFieldsPanel">
+            <div class="dv-fields-title">Extracted fields</div>
+            <div id="dvFieldList"></div>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => requestAnimationFrame(() => backdrop.classList.add('open')));
+
+    // Close handlers
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeDocViewer(); });
+    document.getElementById('dvClose').addEventListener('click', closeDocViewer);
+    const escHandler = e => { if (e.key === 'Escape') closeDocViewer(); };
+    document.addEventListener('keydown', escHandler);
+    backdrop._escHandler = escHandler;
+
+    // Render field list
+    const fieldList = document.getElementById('dvFieldList');
+    const hasBbox = highlights.some(h => h.bbox);
+
+    highlights.forEach((h, i) => {
+      const color = HIGHLIGHT_COLORS[i % HIGHLIGHT_COLORS.length];
+      const hasBb = !!(h.bbox && h.bbox.length === 4);
+      const div = document.createElement('div');
+      div.className = 'dv-field' + (hasBb ? '' : ' no-bbox');
+      div.dataset.index = i;
+      div.innerHTML = `
+        <div class="dv-dot" style="background:${color}"></div>
+        <div class="dv-field-body">
+          <div class="dv-field-label">${h.label}</div>
+          <div class="dv-field-value">${h.value || '—'}</div>
+        </div>`;
+      div.style.color = color;
+      if (hasBb) div.addEventListener('click', () => activateField(i, highlights, color));
+      fieldList.appendChild(div);
+    });
+
+    if (!hasBbox) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:11px;color:var(--hint);margin-top:12px;line-height:1.6;';
+      note.textContent = 'Upload a new document to see position highlights on the image.';
+      fieldList.appendChild(note);
+    }
+
+    // Draw all bbox outlines once image loads (subtle, all visible)
+    if (imgSrc) {
+      const img = document.getElementById('dvImg');
+      const drawAll = () => {
+        const svg = createSvg(img);
+        if (!svg) return;
+        highlights.forEach((h, i) => {
+          if (!h.bbox || h.bbox.length !== 4) return;
+          const color = HIGHLIGHT_COLORS[i % HIGHLIGHT_COLORS.length];
+          drawRect(svg, h.bbox, color, false);
+        });
+      };
+      if (img.complete) drawAll(); else img.addEventListener('load', drawAll);
+    }
+  }
+
+  function activateField(index, highlights, color) {
+    // Deactivate all
+    document.querySelectorAll('.dv-field').forEach(el => el.classList.remove('active'));
+    const active = document.querySelector(`.dv-field[data-index="${index}"]`);
+    if (active) { active.classList.add('active'); active.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+
+    const img = document.getElementById('dvImg');
+    if (!img) return;
+    const h = highlights[index];
+    if (!h.bbox || h.bbox.length !== 4) return;
+
+    // Redraw SVG: all faint, active one solid with label
+    const svg = createSvg(img);
+    if (!svg) return;
+    highlights.forEach((hl, i) => {
+      if (!hl.bbox || hl.bbox.length !== 4) return;
+      const c = HIGHLIGHT_COLORS[i % HIGHLIGHT_COLORS.length];
+      drawRect(svg, hl.bbox, c, i === index);
+    });
+    // Label
+    const [yn, xn, yx, xx] = h.bbox;
+    const wrap = document.getElementById('dvImgWrap');
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const rw = img.offsetWidth, rh = img.offsetHeight;
+    const labelX = (xn / 1000) * rw;
+    const labelY = Math.max(0, (yn / 1000) * rh - 22);
+    let lbl = svg.querySelector('.dv-lbl');
+    if (!lbl) {
+      lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      lbl.setAttribute('class', 'dv-lbl');
+      lbl.setAttribute('font-size', '11');
+      lbl.setAttribute('font-family', 'Inter,system-ui,sans-serif');
+      lbl.setAttribute('font-weight', '600');
+      lbl.setAttribute('fill', '#fff');
+      svg.appendChild(lbl);
+    }
+    const svgW = img.offsetWidth, svgH = img.offsetHeight;
+    lbl.setAttribute('x', Math.min(labelX, svgW - 60));
+    lbl.setAttribute('y', labelY + 14);
+    // bg rect behind label
+    let lbg = svg.querySelector('.dv-lbg');
+    if (!lbg) {
+      lbg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      lbg.setAttribute('class', 'dv-lbg');
+      lbg.setAttribute('rx', '4');
+      svg.insertBefore(lbg, lbl);
+    }
+    lbl.textContent = h.label;
+    lbl.setAttribute('fill', color);
+    // measure text width approximation
+    const tw = h.label.length * 6.5 + 8;
+    lbg.setAttribute('x', Math.min(labelX - 4, svgW - tw - 4));
+    lbg.setAttribute('y', labelY + 2);
+    lbg.setAttribute('width', tw);
+    lbg.setAttribute('height', 16);
+    lbg.setAttribute('fill', 'rgba(255,255,255,0.88)');
+  }
+
+  function createSvg(img) {
+    const wrap = document.getElementById('dvImgWrap');
+    if (!wrap || !img.offsetWidth) return null;
+    let svg = document.getElementById('dvSvg');
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.id = 'dvSvg';
+      svg.classList.add('dv-svg');
+      svg.setAttribute('viewBox', `0 0 ${img.offsetWidth} ${img.offsetHeight}`);
+      wrap.appendChild(svg);
+    }
+    svg.setAttribute('viewBox', `0 0 ${img.offsetWidth} ${img.offsetHeight}`);
+    // Clear non-label children
+    [...svg.children].forEach(el => {
+      if (!el.classList.contains('dv-lbl') && !el.classList.contains('dv-lbg')) el.remove();
+    });
+    return svg;
+  }
+
+  function drawRect(svg, bbox, color, active) {
+    const img = document.getElementById('dvImg');
+    if (!img) return;
+    const [yn, xn, yx, xx] = bbox;
+    const w = img.offsetWidth, h = img.offsetHeight;
+    const x = (xn / 1000) * w, y = (yn / 1000) * h;
+    const rw = ((xx - xn) / 1000) * w, rh = ((yx - yn) / 1000) * h;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', Math.max(rw, 10)); rect.setAttribute('height', Math.max(rh, 10));
+    rect.setAttribute('rx', '3');
+    rect.setAttribute('fill', active ? color + '28' : color + '14');
+    rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-width', active ? '2' : '1');
+    rect.setAttribute('stroke-opacity', active ? '0.9' : '0.45');
+    svg.appendChild(rect);
+  }
+
+  function closeDocViewer() {
+    const backdrop = document.getElementById('dvBackdrop');
+    if (!backdrop) return;
+    if (backdrop._escHandler) document.removeEventListener('keydown', backdrop._escHandler);
+    backdrop.classList.remove('open');
+    setTimeout(() => backdrop.remove(), 220);
+  }
 </script>
 </body>
 </html>
