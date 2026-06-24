@@ -77,6 +77,13 @@
     .btn-ghost:hover { border-color: var(--border-strong); color: var(--text); }
     @media (max-width: 560px) { .nf-grid { grid-template-columns: 1fr; } .nf-goalrow { grid-template-columns: 1fr; } }
 
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 18px; }
+    .filter-group { display: flex; flex-direction: column; gap: 5px; }
+    .filter-group label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); }
+    .filters select { font-family: var(--sans); font-size: 13px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+    .filters select:focus { outline: none; border-color: var(--border-strong); }
+    .result-count { font-size: 12px; color: var(--muted); margin-left: auto; padding-bottom: 9px; }
+
     .demo-note { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 11px 13px; line-height: 1.5; margin-bottom: 28px; }
 
     /* Roster list */
@@ -186,6 +193,57 @@
   }
 
   let showForm = false;
+  let filterYear = 'all', filterWorker = 'all', sortBy = 'name-asc';
+
+  function uniqueSorted(key) {
+    return [...new Set(ROSTER.map(s => s[key]))].sort((a, b) => a.localeCompare(b));
+  }
+
+  function visibleStudents() {
+    return ROSTER
+      .filter(s => (filterYear === 'all' || s.year === filterYear) && (filterWorker === 'all' || s.key_worker === filterWorker))
+      .slice()
+      .sort((a, b) => sortBy === 'name-desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name));
+  }
+
+  function setFilter(kind, val) {
+    if (kind === 'year') filterYear = val;
+    else if (kind === 'worker') filterWorker = val;
+    else if (kind === 'sort') sortBy = val;
+    renderList();
+  }
+
+  function opt(value, label, selected) {
+    return `<option value="${value}"${value === selected ? ' selected' : ''}>${label}</option>`;
+  }
+
+  function filtersHtml() {
+    const years = uniqueSorted('year');
+    const workers = uniqueSorted('key_worker');
+    const n = visibleStudents().length;
+    return `
+      <div class="filters">
+        <div class="filter-group">
+          <label>Year</label>
+          <select onchange="setFilter('year', this.value)">
+            ${opt('all', 'All years', filterYear)}${years.map(y => opt(y, y, filterYear)).join('')}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Key worker</label>
+          <select onchange="setFilter('worker', this.value)">
+            ${opt('all', 'All key workers', filterWorker)}${workers.map(w => opt(w, w, filterWorker)).join('')}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Sort</label>
+          <select onchange="setFilter('sort', this.value)">
+            ${opt('name-asc', 'Name A–Z', sortBy)}${opt('name-desc', 'Name Z–A', sortBy)}
+          </select>
+        </div>
+        <span class="result-count">${n} student${n === 1 ? '' : 's'}</span>
+      </div>`;
+  }
 
   function formHtml() {
     return `
@@ -213,7 +271,8 @@
   }
 
   function renderList() {
-    const rows = ROSTER.map(s => `
+    const list = visibleStudents();
+    const rows = list.length ? list.map(s => `
       <button class="roster-row" onclick="location.hash='${s.id}'">
         <span class="avatar">${ini(s.name)}</span>
         <span class="roster-main">
@@ -224,7 +283,7 @@
           <span class="goal-count">${s.goals.length} active goal${s.goals.length === 1 ? '' : 's'}</span>
           <span class="roster-arrow">→</span>
         </span>
-      </button>`).join('');
+      </button>`).join('') : '';
     document.getElementById('page').innerHTML = `
       <div class="list-head">
         <div>
@@ -235,7 +294,8 @@
       </div>
       <div class="demo-note"><span>⚑</span><span>Demo roster. Sample students plus any you add (saved on this device) until your IEP source is connected.</span></div>
       ${showForm ? formHtml() : ''}
-      <div class="roster">${rows}</div>`;
+      ${filtersHtml()}
+      ${rows ? `<div class="roster">${rows}</div>` : `<div class="empty-state" style="padding:32px 0;color:var(--hint);font-size:14px">No students match these filters.</div>`}`;
     if (showForm) document.getElementById('nfName').focus();
   }
 
