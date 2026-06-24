@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Co-Pilot — Students</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee;
+      --surface: #faf8f5;
+      --border: #e8e3dc;
+      --border-hover: #ccc6be;
+      --border-strong: #aaa49d;
+      --accent-light: #f0ede8;
+      --text: #1a1a1a;
+      --muted: #888077;
+      --hint: #b8b0a5;
+      --success: #2d7a4f;
+      --success-bg: #f3faf5;
+      --success-border: #bfe0cc;
+      --warn: #a06b1a;
+      --warn-bg: #fdf9f1;
+      --warn-border: #e4d3b8;
+      --danger: #c0392b;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .logo-mark { font-size: 18px; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .side-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .side-link:hover { background: var(--accent-light); color: var(--text); }
+    .side-link.active { background: var(--accent-light); color: var(--text); }
+
+    main.content { margin-left: 220px; flex: 1; min-width: 0; }
+    .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { position: sticky; width: auto; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; }
+      .sidebar-brand { padding: 0 14px 0 6px; }
+      .sidebar-nav { flex-direction: row; gap: 4px; }
+      .side-link span { display: none; }
+      .side-link { padding: 9px; }
+      main.content { margin-left: 0; }
+    }
+
+    .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
+    .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+    .demo-note { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 11px 13px; line-height: 1.5; margin-bottom: 28px; }
+
+    /* Roster list */
+    .roster { display: flex; flex-direction: column; }
+    .roster-row { display: flex; align-items: center; gap: 13px; padding: 14px 0; border-top: 1px solid var(--border); cursor: pointer; text-align: left; background: none; border-left: none; border-right: none; border-bottom: none; width: 100%; font-family: var(--sans); transition: opacity .15s; }
+    .roster-row:last-child { border-bottom: 1px solid var(--border); }
+    .roster-row:hover { opacity: .65; }
+    .avatar { width: 36px; height: 36px; border-radius: 99px; background: var(--accent-light); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+    .roster-main { flex: 1; min-width: 0; }
+    .roster-name { font-size: 14px; font-weight: 500; }
+    .roster-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .roster-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .goal-count { font-size: 12px; color: var(--muted); }
+    .roster-arrow { font-size: 12px; color: var(--hint); }
+
+    /* Detail */
+    .back-btn { display: inline-flex; align-items: center; gap: 7px; background: none; border: none; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; margin-bottom: 20px; }
+    .back-btn:hover { color: var(--text); }
+    .detail-head { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .detail-head .avatar { width: 48px; height: 48px; font-size: 15px; }
+    .detail-name { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+    .detail-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 12px; }
+
+    .goal-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 16px 18px; margin-bottom: 12px; }
+    .goal-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .goal-text { font-size: 14px; line-height: 1.45; flex: 1; }
+    .status-pill { flex-shrink: 0; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
+    .status-met { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+    .status-track { color: var(--muted); background: var(--accent-light); border: 1px solid var(--border); }
+    .status-attention { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); }
+    .progress-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 100%; border-radius: 99px; background: var(--text); transform-origin: left; }
+    .progress-fill.met { background: var(--success); }
+    .goal-numbers { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .goal-numbers strong { color: var(--text); font-weight: 600; }
+    .history { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .history-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 3px 0; }
+    .history-row .hv { color: var(--text); }
+
+    /* Floating upload button */
+    .fab-upload { position: fixed; top: 18px; right: 26px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden; transition: background .15s; }
+    .fab-upload:hover { background: #333; }
+    .fab-upload svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .fab-upload.uploading { opacity: .6; pointer-events: none; }
+    .fab-status { position: fixed; top: 54px; right: 26px; z-index: 50; font-size: 12px; color: var(--muted); text-align: right; }
+    .fab-status.error { color: var(--danger); }
+    @media (max-width: 700px) {
+      .fab-upload { top: auto; bottom: 20px; right: 20px; }
+      .fab-status { top: auto; bottom: 58px; right: 20px; }
+    }
+  </style>
+</head>
+<body>
+<button class="fab-upload" id="uploadBtn">
+  <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+  Upload
+  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+</button>
+<span class="fab-status" id="uploadStatus"></span>
+
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
+  <nav class="sidebar-nav">
+    <a class="side-link" href="/">
+      <svg viewBox="0 0 20 20"><path d="M3 8.5L10 3l7 5.5"/><path d="M5 7.5V16h10V7.5"/><path d="M8.5 16v-4h3v4"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="side-link" href="/queue.html">
+      <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
+      <span>Review queue</span>
+    </a>
+    <a class="side-link active" href="/students.html">
+      <svg viewBox="0 0 20 20"><circle cx="7" cy="7" r="3"/><path d="M2 17c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M13 4.5a3 3 0 0 1 0 5.4M14 12.2c2 .5 3.5 2.2 3.5 4.3"/></svg>
+      <span>Students</span>
+    </a>
+    <a class="side-link" href="/match.html">
+      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
+      <span>Goal matching</span>
+    </a>
+  </nav>
+</aside>
+
+<main class="content">
+<div class="page" id="page"></div>
+</main>
+
+<script src="/roster.js"></script>
+<script>
+  function ini(name) {
+    return (name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function goalStatus(g) {
+    const pct = g.current / g.target;
+    // For "fewer is better" goals (prompts), lower current is good; treat reaching/under target as met.
+    const lowerIsBetter = /prompt/i.test(g.unit);
+    if (lowerIsBetter) {
+      if (g.current <= g.target) return { key: 'met', label: 'On target', cls: 'status-met' };
+      return { key: 'attention', label: 'Above target', cls: 'status-attention' };
+    }
+    if (pct >= 1) return { key: 'met', label: 'Target met', cls: 'status-met' };
+    if (pct >= 0.6) return { key: 'track', label: 'On track', cls: 'status-track' };
+    return { key: 'attention', label: 'Needs attention', cls: 'status-attention' };
+  }
+
+  function renderList() {
+    const rows = ROSTER.map(s => `
+      <button class="roster-row" onclick="location.hash='${s.id}'">
+        <span class="avatar">${ini(s.name)}</span>
+        <span class="roster-main">
+          <span class="roster-name">${s.name}</span>
+          <span class="roster-meta">${s.year} · ${s.key_worker}</span>
+        </span>
+        <span class="roster-right">
+          <span class="goal-count">${s.goals.length} active goal${s.goals.length === 1 ? '' : 's'}</span>
+          <span class="roster-arrow">→</span>
+        </span>
+      </button>`).join('');
+    document.getElementById('page').innerHTML = `
+      <div class="page-title">Students</div>
+      <div class="page-subtitle">Your class roster and each student's active goals.</div>
+      <div class="demo-note"><span>⚑</span><span>Demo roster. These students and goals are sample data until your IEP source is connected.</span></div>
+      <div class="roster">${rows}</div>`;
+  }
+
+  function renderDetail(s) {
+    const goals = s.goals.map(g => {
+      const st = goalStatus(g);
+      const pct = Math.max(0, Math.min(100, Math.round((g.current / g.target) * 100)));
+      const history = (g.history || []).slice().reverse().map(h =>
+        `<div class="history-row"><span>${h.date}</span><span class="hv">${h.value} ${g.unit}</span></div>`).join('');
+      return `
+        <div class="goal-card">
+          <div class="goal-top">
+            <span class="goal-text">${g.text}</span>
+            <span class="status-pill ${st.cls}">${st.label}</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill ${st.key === 'met' ? 'met' : ''}" style="transform:scaleX(${pct / 100})"></div></div>
+          <div class="goal-numbers"><span>Current: <strong>${g.current} ${g.unit}</strong></span><span>Target: ${g.target} ${g.unit}</span></div>
+          ${history ? `<div class="history">${history}</div>` : ''}
+        </div>`;
+    }).join('');
+    document.getElementById('page').innerHTML = `
+      <button class="back-btn" onclick="location.hash=''">← All students</button>
+      <div class="detail-head">
+        <span class="avatar">${ini(s.name)}</span>
+        <div>
+          <div class="detail-name">${s.name}</div>
+          <div class="detail-meta">${s.year} · Key worker: ${s.key_worker}</div>
+        </div>
+      </div>
+      <div class="section-label">Active goals (${s.goals.length})</div>
+      ${goals}`;
+  }
+
+  function route() {
+    const id = location.hash.replace('#', '');
+    const student = ROSTER.find(s => s.id === id);
+    if (student) renderDetail(student); else renderList();
+  }
+
+  window.addEventListener('hashchange', route);
+
+  async function handleUpload(file) {
+    if (!file) return;
+    const btn = document.getElementById('uploadBtn');
+    const status = document.getElementById('uploadStatus');
+    btn.classList.add('uploading');
+    status.className = 'fab-status';
+    status.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/parse', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      window.location = '/queue.html';
+    } catch(e) {
+      status.className = 'fab-status error';
+      status.textContent = e.message;
+      btn.classList.remove('uploading');
+    }
+  }
+
+  route();
+</script>
+</body>
+</html>

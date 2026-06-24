@@ -140,6 +140,10 @@
       <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
       <span>Review queue</span>
     </a>
+    <a class="side-link" href="/students.html">
+      <svg viewBox="0 0 20 20"><circle cx="7" cy="7" r="3"/><path d="M2 17c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M13 4.5a3 3 0 0 1 0 5.4M14 12.2c2 .5 3.5 2.2 3.5 4.3"/></svg>
+      <span>Students</span>
+    </a>
     <a class="side-link active" href="/match.html">
       <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
       <span>Goal matching</span>
@@ -186,25 +190,9 @@
 </div>
 </main>
 
+<script src="/roster.js"></script>
 <script>
-  // --- Mock roster (stands in for the connected IEP data source) ---
-  const ROSTER = [
-    { id: 'amara', name: 'Amara Osei', year: 'Year 4', goals: [
-      { id: 'a1', text: 'Read 100 high-frequency sight words independently', target: 100, unit: 'sight words' },
-      { id: 'a2', text: 'Sustain attention during carpet time for 10 minutes', target: 10, unit: 'minutes' },
-      { id: 'a3', text: 'Solve two-digit addition with 80% accuracy', target: 80, unit: '%' },
-      { id: 'a4', text: 'Use three-word phrases to request items', target: 3, unit: 'words' }
-    ]},
-    { id: 'tyler', name: 'Tyler Kemp', year: 'Year 4', goals: [
-      { id: 't1', text: 'Reduce adult prompts during transitions to 4 or fewer', target: 4, unit: 'prompts' },
-      { id: 't2', text: 'Complete morning routine independently 4 of 5 days', target: 5, unit: 'days' },
-      { id: 't3', text: 'Read number bonds to 20 with 90% accuracy', target: 90, unit: '%' }
-    ]},
-    { id: 'priya', name: 'Priya Shah', year: 'Year 4', goals: [
-      { id: 'p1', text: 'Write a simple sentence with capital and full stop', target: 10, unit: 'sentences' },
-      { id: 'p2', text: 'Recall multiplication facts to 5x with 80% accuracy', target: 80, unit: '%' }
-    ]}
-  ];
+  // ROSTER comes from /roster.js (shared with the Students page)
 
   // --- Mock extracted record (as if it came from a capture) ---
   const EXTRACTED = {
