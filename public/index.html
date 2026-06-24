@@ -12,6 +12,8 @@
       --bg: #f5f2ee;
       --surface: #faf8f5;
       --border: #e8e3dc;
+      --border-hover: #ccc6be;
+      --border-strong: #aaa49d;
       --text: #1a1a1a;
       --muted: #888077;
       --hint: #b8b0a5;
@@ -35,7 +37,7 @@
     .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
 
     main.content { margin-left: 220px; flex: 1; min-width: 0; }
-    .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+    .page { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
 
     @media (max-width: 700px) {
       body { flex-direction: column; }
@@ -49,15 +51,33 @@
     }
 
     .greeting { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
-    .greeting-sub { font-size: 14px; color: var(--muted); margin-bottom: 40px; }
+    .greeting-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
 
-    /* Stat row */
-    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 40px; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-    .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); margin-bottom: 8px; }
-    .stat-value { font-size: 32px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+    /* Capture zone */
+    .capture-zone { position: relative; border: 1.5px dashed var(--border-strong); border-radius: 12px; padding: 36px 24px; text-align: center; background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s; margin-bottom: 36px; }
+    .capture-zone:hover, .capture-zone.drag { border-color: var(--text); background: var(--accent-light); }
+    .capture-zone.busy { pointer-events: none; opacity: .7; }
+    .capture-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .cz-icon { width: 32px; height: 32px; stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 12px; }
+    .cz-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .cz-sub { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 400px; margin: 0 auto; }
+    .cz-status { font-size: 13px; margin-top: 14px; min-height: 18px; }
+    .cz-status.success { color: var(--success); }
+    .cz-status.error { color: var(--danger); }
+
+    /* Status strip */
+    .stat-strip { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 36px; }
+    .stat-cell { flex: 1; padding: 16px 18px; border-right: 1px solid var(--border); }
+    .stat-cell:last-child { border-right: none; }
+    .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); margin-bottom: 6px; }
+    .stat-value { font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
     .stat-value.warn { color: var(--warn); }
     .stat-value.success { color: var(--success); }
+    @media (max-width: 560px) {
+      .stat-strip { flex-wrap: wrap; }
+      .stat-cell { flex: 1 0 50%; border-bottom: 1px solid var(--border); }
+      .stat-cell:nth-child(even) { border-right: none; }
+    }
 
     /* Section */
     .section { margin-bottom: 36px; }
@@ -65,6 +85,12 @@
     .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); }
     .section-link { font-size: 12px; color: var(--muted); text-decoration: none; }
     .section-link:hover { color: var(--text); }
+
+    /* Type breakdown */
+    .type-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .type-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; font-size: 13px; }
+    .type-chip .count { font-weight: 600; }
+    .type-chip .label { color: var(--muted); text-transform: capitalize; }
 
     /* Capture rows */
     .capture-list { display: flex; flex-direction: column; }
@@ -81,8 +107,8 @@
     .row-time { font-size: 12px; color: var(--hint); }
     .row-arrow { font-size: 11px; color: var(--hint); }
 
-    .empty { font-size: 14px; color: var(--hint); padding: 20px 0; }
-    .loading { font-size: 14px; color: var(--hint); padding: 20px 0; display: flex; align-items: center; gap: 8px; }
+    .empty { font-size: 14px; color: var(--hint); padding: 16px 0; }
+    .loading { font-size: 14px; color: var(--hint); padding: 16px 0; display: flex; align-items: center; gap: 8px; }
     .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -126,20 +152,36 @@
 <main class="content">
 <div class="page">
   <div class="greeting">Good <span id="timeOfDay">day</span>.</div>
-  <div class="greeting-sub">Here's where things stand.</div>
+  <div class="greeting-sub">Capture a document, or pick up where you left off.</div>
 
-  <div id="stats" class="stat-row">
-    <div class="stat-card"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>
-    <div class="stat-card"><div class="stat-label">Needs review</div><div class="stat-value warn" id="statReview">—</div></div>
-    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value success" id="statApproved">—</div></div>
+  <div class="capture-zone" id="captureZone">
+    <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+    <svg class="cz-icon" viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="18" rx="2"/><path d="M4 13h24M11 8V6a1 1 0 011-1h9a1 1 0 011 1v2"/><circle cx="16" cy="20" r="4"/></svg>
+    <div class="cz-title">Capture a document</div>
+    <div class="cz-sub">Snap or drop a photo of an assessment sheet, IEP progress, behaviour note or observation. We'll pull out the data for you to review.</div>
+    <div class="cz-status" id="captureStatus"></div>
   </div>
 
-  <div class="section" id="flaggedSection">
+  <div class="stat-strip">
+    <div class="stat-cell"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>
+    <div class="stat-cell"><div class="stat-label">Needs review</div><div class="stat-value warn" id="statReview">—</div></div>
+    <div class="stat-cell"><div class="stat-label">Ready</div><div class="stat-value" id="statReady">—</div></div>
+    <div class="stat-cell"><div class="stat-label">Approved</div><div class="stat-value success" id="statApproved">—</div></div>
+  </div>
+
+  <div class="section" id="attentionSection">
     <div class="section-header">
-      <span class="section-label">Flagged</span>
-      <a class="section-link" href="/queue.html?filter=needs_review">See all →</a>
+      <span class="section-label">Needs your attention</span>
+      <a class="section-link" href="/queue.html">Open queue →</a>
     </div>
     <div id="flaggedList" class="loading"><div class="spinner"></div>Loading…</div>
+  </div>
+
+  <div class="section" id="typeSection">
+    <div class="section-header">
+      <span class="section-label">By document type</span>
+    </div>
+    <div id="typeRow" class="loading"><div class="spinner"></div>Loading…</div>
   </div>
 
   <div class="section">
@@ -196,17 +238,35 @@
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       const thisWeek = captures.filter(c => new Date(c.created_at) > weekAgo);
       const needsReview = captures.filter(c => c.status === 'needs_review');
+      const ready = captures.filter(c => c.status === 'ready');
       const approved = captures.filter(c => c.status === 'approved');
 
       document.getElementById('statTotal').textContent = thisWeek.length;
       document.getElementById('statReview').textContent = needsReview.length;
+      document.getElementById('statReady').textContent = ready.length;
       document.getElementById('statApproved').textContent = approved.length;
 
       const flaggedEl = document.getElementById('flaggedList');
       if (needsReview.length) {
         flaggedEl.innerHTML = `<div class="capture-list">${needsReview.slice(0, 5).map(rowHtml).join('')}</div>`;
       } else {
-        flaggedEl.innerHTML = `<div class="empty">Nothing flagged — all clear.</div>`;
+        flaggedEl.innerHTML = `<div class="empty">Nothing needs review right now.</div>`;
+      }
+
+      const typeEl = document.getElementById('typeRow');
+      const counts = {};
+      for (const c of captures) {
+        const t = (c.result_json && c.result_json.doc_type) || 'unknown';
+        counts[t] = (counts[t] || 0) + 1;
+      }
+      const types = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (types.length) {
+        typeEl.className = '';
+        typeEl.innerHTML = `<div class="type-row">${types.map(([t, n]) =>
+          `<span class="type-chip"><span class="count">${n}</span><span class="label">${t}</span></span>`).join('')}</div>`;
+      } else {
+        typeEl.className = '';
+        typeEl.innerHTML = `<div class="empty">No documents captured yet.</div>`;
       }
 
       const recentEl = document.getElementById('recentList');
@@ -217,32 +277,49 @@
       }
     } catch(e) {
       document.getElementById('flaggedList').innerHTML = `<div class="empty" style="color:var(--danger)">${e.message}</div>`;
+      document.getElementById('typeRow').innerHTML = '';
       document.getElementById('recentList').innerHTML = '';
+    }
+  }
+
+  function setStatus(msg, kind) {
+    for (const id of ['captureStatus', 'uploadStatus']) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = (id === 'captureStatus' ? 'cz-status' : 'fab-status') + (kind ? ' ' + kind : '');
     }
   }
 
   async function handleUpload(file) {
     if (!file) return;
-    const btn = document.getElementById('uploadBtn');
-    const status = document.getElementById('uploadStatus');
-    btn.classList.add('uploading');
-    status.className = 'upload-status';
-    status.textContent = 'Uploading…';
+    document.getElementById('uploadBtn').classList.add('uploading');
+    document.getElementById('captureZone').classList.add('busy');
+    setStatus('Uploading…', '');
     try {
       const fd = new FormData();
       fd.append('image', file);
       const res = await fetch('/api/parse', { method: 'POST', body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      status.className = 'upload-status success';
-      status.textContent = 'Saved to review queue ✓';
-      load();
+      setStatus('Added to review queue ✓', 'success');
+      await load();
+      setTimeout(() => setStatus('', ''), 3000);
     } catch(e) {
-      status.className = 'upload-status error';
-      status.textContent = e.message;
+      setStatus(e.message, 'error');
     }
-    btn.classList.remove('uploading');
+    document.getElementById('uploadBtn').classList.remove('uploading');
+    document.getElementById('captureZone').classList.remove('busy');
   }
+
+  const zone = document.getElementById('captureZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) handleUpload(f);
+  });
 
   load();
 </script>
