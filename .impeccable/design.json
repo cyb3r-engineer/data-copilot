@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-24T00:00:00.000Z",
+  "title": "Design System: Data Co-Pilot",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Warm Paper", "canonical": "#f5f2ee", "tonalRamp": ["#2a2723", "#46423b", "#635d53", "#847d70", "#a59d8f", "#c7bfb0", "#e3ddd0", "#f5f2ee"] },
+      "surface": { "role": "neutral", "displayName": "Raised Surface", "canonical": "#faf8f5", "tonalRamp": ["#2d2b27", "#494640", "#666158", "#867f73", "#a8a094", "#cbc4b6", "#e6e1d6", "#faf8f5"] },
+      "ink": { "role": "primary", "displayName": "Ink Near-Black", "canonical": "#1a1a1a", "tonalRamp": ["#1a1a1a", "#333333", "#4d4d4d", "#666666", "#888077", "#b8b0a5", "#d8d2c8", "#f0ede8"] },
+      "muted": { "role": "neutral", "displayName": "Muted Stone", "canonical": "#888077", "tonalRamp": ["#26241f", "#3d3a33", "#555148", "#6e695e", "#888077", "#a89f90", "#c9c2b4", "#ece7dc"] },
+      "success": { "role": "tertiary", "displayName": "Approved Green", "canonical": "#2d7a4f", "tonalRamp": ["#0f2a1c", "#16432c", "#1e5d3c", "#27744d", "#2d7a4f", "#5aa57c", "#93cbac", "#f3faf5"] },
+      "warn": { "role": "tertiary", "displayName": "Flag Amber", "canonical": "#a06b1a", "tonalRamp": ["#2a1c08", "#43300f", "#5d4416", "#7a5a1d", "#a06b1a", "#c79a52", "#e4cb98", "#fdf9f1"] },
+      "danger": { "role": "tertiary", "displayName": "Error Red", "canonical": "#c0392b", "tonalRamp": ["#2e0e0a", "#4a1611", "#661f17", "#8a2a1f", "#c0392b", "#d57063", "#e8a89f", "#fbeeec"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Big dashboard stat numbers only." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles and the greeting." },
+      "title": { "displayName": "Title", "purpose": "Product wordmark and section headings." },
+      "body": { "displayName": "Body", "purpose": "Row summaries, names, values, messages." },
+      "label": { "displayName": "Label", "purpose": "Uppercase section labels and the doc-type tag." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "state-fast", "value": "0.15s ease", "purpose": "Default for hover/border/color state changes on controls." }
+    ],
+    "breakpoints": [
+      { "name": "narrow", "value": "700px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single most important action in context — Upload, Approve, Add.",
+      "html": "<button class=\"ds-btn-primary\">Approve</button>",
+      "css": ".ds-btn-primary { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #faf8f5; background: #1a1a1a; border: 1px solid #1a1a1a; border-radius: 99px; padding: 8px 16px; cursor: pointer; transition: background 0.15s ease; } .ds-btn-primary:hover { background: #333333; } .ds-btn-primary:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions — Mark ready, Edit.",
+      "html": "<button class=\"ds-btn-ghost\">Mark ready</button>",
+      "css": ".ds-btn-ghost { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #888077; background: transparent; border: 1px solid #e8e3dc; border-radius: 99px; padding: 8px 16px; cursor: pointer; transition: all 0.15s ease; } .ds-btn-ghost:hover { border-color: #aaa49d; color: #1a1a1a; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Status filter pills; exactly one active at a time, the ink fill is the selection signal.",
+      "html": "<div class=\"ds-chip-row\"><button class=\"ds-chip ds-chip-active\">All</button><button class=\"ds-chip\">Needs review</button><button class=\"ds-chip\">Approved</button></div>",
+      "css": ".ds-chip-row { display: flex; gap: 6px; } .ds-chip { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #888077; background: transparent; border: 1px solid #e8e3dc; border-radius: 99px; padding: 6px 14px; cursor: pointer; transition: all 0.15s ease; } .ds-chip:hover { border-color: #ccc6be; color: #1a1a1a; } .ds-chip-active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "stat-card",
+      "description": "At-a-glance dashboard count.",
+      "html": "<div class=\"ds-stat\"><div class=\"ds-stat-label\">Needs review</div><div class=\"ds-stat-value\">3</div></div>",
+      "css": ".ds-stat { font-family: Inter, system-ui, sans-serif; background: #faf8f5; border: 1px solid #e8e3dc; border-radius: 12px; padding: 20px; min-width: 160px; } .ds-stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: #b8b0a5; margin-bottom: 8px; } .ds-stat-value { font-size: 32px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; color: #a06b1a; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Free-form field; border firms on focus, no glow ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Add the missing info…\">",
+      "css": ".ds-input { font-family: Inter, system-ui, sans-serif; font-size: 13px; color: #1a1a1a; background: #faf8f5; border: 1px solid #e8e3dc; border-radius: 8px; padding: 7px 10px; width: 100%; } .ds-input::placeholder { color: #b8b0a5; } .ds-input:focus { outline: none; border-color: #aaa49d; }"
+    },
+    {
+      "name": "Flag Card",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Human-in-the-loop made visible: the AI's uncertainty as an actionable warn-tinted card that flips to success-tinted on resolution.",
+      "html": "<div class=\"ds-flag\"><div class=\"ds-flag-q\"><span>↳</span><span>Year for the observation date is missing.</span></div><div class=\"ds-flag-row\"><input class=\"ds-flag-input\" type=\"date\"><button class=\"ds-flag-add\">Add</button></div></div>",
+      "css": ".ds-flag { font-family: Inter, system-ui, sans-serif; border: 1px solid #e4d3b8; background: #fdf9f1; border-radius: 8px; padding: 11px 12px; } .ds-flag-q { font-size: 12px; color: #a06b1a; line-height: 1.5; display: flex; gap: 7px; margin-bottom: 8px; } .ds-flag-row { display: flex; gap: 6px; } .ds-flag-input { flex: 1; font-family: inherit; font-size: 13px; color: #1a1a1a; background: #faf8f5; border: 1px solid #e8e3dc; border-radius: 6px; padding: 7px 10px; } .ds-flag-input:focus { outline: none; border-color: #aaa49d; } .ds-flag-add { flex-shrink: 0; font-size: 12px; font-weight: 500; color: #fff; background: #1a1a1a; border: 1px solid #1a1a1a; border-radius: 6px; padding: 7px 16px; cursor: pointer; transition: background 0.15s ease; } .ds-flag-add:hover { background: #333; }"
+    },
+    {
+      "name": "Capture Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The core review pattern — a border-divided list item, not a card. Expands in place.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-dot\"></span><span class=\"ds-row-summary\">Year 4 maths assessment — fractions unit</span><span class=\"ds-row-tag\">assessment</span><span class=\"ds-row-time\">2h ago</span><span class=\"ds-row-chev\">▾</span></div>",
+      "css": ".ds-row { font-family: Inter, system-ui, sans-serif; display: flex; align-items: center; gap: 12px; padding: 16px 0; border-top: 1px solid #e8e3dc; cursor: pointer; } .ds-dot { width: 7px; height: 7px; border-radius: 50%; background: #a06b1a; flex-shrink: 0; } .ds-row-summary { font-size: 14px; font-weight: 500; color: #1a1a1a; flex: 1; } .ds-row-tag { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #888077; } .ds-row-time { font-size: 12px; color: #b8b0a5; } .ds-row-chev { font-size: 11px; color: #b8b0a5; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lab Notebook",
+    "overview": "The interface equivalent of a careful professional's working record: a warm paper surface, ink-black text, and color used only where it carries meaning. It reads as something you write in, not something that performs at you. The personality — capable, quiet, exact — shows up as restraint: generous whitespace, hairline dividers instead of boxes, and a single near-black ink doing almost all the typographic work. Layering is tonal, not shadowed; structure comes from borders and spacing. It rejects childish edu-app energy, AI-hype aesthetics, and clinical enterprise SaaS chrome.",
+    "keyCharacteristics": [
+      "Warm paper body, ink-black text, color reserved for meaning",
+      "Tonal layering and hairline dividers; near-zero shadow",
+      "One typeface (Inter) carrying the whole hierarchy through weight and size",
+      "Pill-shaped controls; a single solid ink primary, no gradients",
+      "Low-density capture, higher-density review"
+    ],
+    "rules": [
+      { "name": "The Meaning-Only Color Rule", "body": "Paper and ink carry the interface. Green, amber, and red appear only to signal status, a flag, or an error — never for emphasis or decoration. If a color isn't telling the teacher something, it's wrong.", "section": "colors" },
+      { "name": "The Ink-First Rule", "body": "When in doubt, it's ink on paper. Reach for a tint only when the element has a semantic state to express.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Inter only. Hierarchy comes from weight and size, never from introducing a second typeface.", "section": "typography" },
+      { "name": "The No-Shadow Rule", "body": "Surfaces are distinguished by tone and a 1px border, never by a drop shadow. If something needs to feel lifted, lighten it toward surface; don't float it.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep ink-on-paper as the default; introduce green/amber/red only to signal status, a flag, or an error.",
+      "Do use tonal layering (paper → surface → surface-sunk) and 1px borders for structure.",
+      "Do keep body text at ink or muted with ≥4.5:1 contrast; if a gray is close to failing, push it toward ink. Never set body copy in hint (#b8b0a5).",
+      "Do match the input type to the question — a date picker for a missing date, text for free-form notes.",
+      "Do present every AI extraction as a draft the teacher confirms or corrects."
+    ],
+    "donts": [
+      "Don't use purple gradients, glassmorphism, or sparkle/magic AI iconography. The AI is infrastructure, not a selling point.",
+      "Don't introduce childish edu-app cues: cartoon mascots, bright primary-color blocks, gamified badges, streaks, or confetti.",
+      "Don't drift into clinical enterprise SaaS: dense cold data grids, navy-and-gray admin chrome.",
+      "Don't add drop shadows. Surfaces are flat; depth is tonal.",
+      "Don't introduce a second typeface. Inter carries everything.",
+      "Don't use a border-left/border-right colored stripe as an accent on cards or rows. Use full borders or a background tint."
+    ]
+  }
+}
