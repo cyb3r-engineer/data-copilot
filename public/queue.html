@@ -89,6 +89,11 @@
     .flag-add-btn { flex-shrink: 0; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
     .flag-add-btn:hover { background: #333; }
     .flag-add-btn:disabled { opacity: .6; cursor: default; }
+    .flag-resolved-msg { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--success); }
+    .flag-resolved-msg span { flex: 1; }
+    .flag-resolved-msg strong { font-weight: 600; color: var(--text); }
+    .flag-edit-btn { flex-shrink: 0; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .flag-edit-btn:hover { border-color: #aaa49d; color: var(--text); }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
     .note-input:focus { outline: none; border-color: #aaa49d; }
     .card-actions { display: flex; gap: 8px; }
@@ -283,14 +288,35 @@
         body: JSON.stringify({ id, status: capture.status, teacher_note: document.getElementById(`note-${id}`)?.value || capture.teacher_note, result_json })
       });
       capture.result_json = result_json; // keep local state in sync without re-rendering
-      document.getElementById(`flagcard-${id}-${index}`).classList.add('resolved');
-      btn.textContent = 'Saved ✓';
-      setTimeout(() => { btn.textContent = 'Update'; btn.disabled = false; }, 1200);
+      const card = document.getElementById(`flagcard-${id}-${index}`);
+      card.classList.add('resolved');
+      card.innerHTML = `
+        <div class="flag-q"><span>✓</span><span>${flag}</span></div>
+        <div class="flag-resolved-msg">
+          <span>Information updated — <strong>"${val.replace(/"/g, '&quot;')}"</strong></span>
+          <button class="flag-edit-btn" onclick="editResolution('${id}',${index},'${input.dataset.flag}')">Edit</button>
+        </div>`;
     } catch(e) {
       btn.textContent = prevLabel;
       btn.disabled = false;
       alert('Save failed: ' + e.message);
     }
+  }
+
+  function editResolution(id, index, flagEnc) {
+    const capture = allCaptures.find(c => c.id === id);
+    const flag = decodeURIComponent(flagEnc);
+    const resolved = (capture?.result_json?.flag_resolutions || []).find(x => x.flag === flag);
+    const card = document.getElementById(`flagcard-${id}-${index}`);
+    card.innerHTML = `
+      <div class="flag-q"><span>↳</span><span>${flag}</span></div>
+      <div class="flag-input-row">
+        <input class="flag-resolve" id="flagres-${id}-${index}" data-flag="${flagEnc}"
+          placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();saveResolution('${id}',${index})}">
+        <button class="flag-add-btn" onclick="saveResolution('${id}',${index})">Update</button>
+      </div>`;
+    document.getElementById(`flagres-${id}-${index}`).focus();
   }
 
   async function updateCapture(id, status) {
