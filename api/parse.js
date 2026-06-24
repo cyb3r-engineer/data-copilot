@@ -170,7 +170,7 @@ export default async function handler(req, res) {
       .select('id')
       .single();
 
-    if (dbError) console.warn('Supabase save failed:', dbError.message);
+    if (dbError) return res.status(500).json({ ok: false, error: 'Supabase save failed: ' + dbError.message });
 
     res.status(200).json({ ok: true, result: parsed, raw: JSON.stringify(parsed), id: saved?.id ?? null });
   } catch (err) {
