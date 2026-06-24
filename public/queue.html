@@ -246,7 +246,7 @@
     list.innerHTML = `<div class="queue-list">${filtered.map(c => cardHtml(c)).join('')}</div>`;
     filtered.forEach(c => {
       document.getElementById(`card-${c.id}`).addEventListener('click', e => {
-        if (e.target.closest('button, textarea, input')) return;
+        if (e.target.closest('button, textarea, input, select, .link-row, .linked-chips, .flag-block')) return;
         toggleCard(c.id);
       });
     });
