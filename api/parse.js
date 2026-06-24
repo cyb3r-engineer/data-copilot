@@ -11,20 +11,22 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemi
 const PROMPT = `You are an AI data extraction assistant for a teacher data co-pilot tool.
 Analyse this teacher document and extract all structured information.
 
-Respond ONLY with a valid JSON object — no preamble, no markdown fences, nothing outside the JSON.
+Respond ONLY with a valid JSON object: no preamble, no markdown fences, nothing outside the JSON.
 
 {
   "doc_type": "assessment | observation | iep | behaviour | attendance | reflection | unknown",
   "confidence": <integer 0-100>,
   "summary": "<one sentence describing what this document contains>",
-  "date": "<date string if found, else null>",
+  "date": "<the date the data was recorded, taken from the document itself, else null>",
   "teacher": "<teacher name or initials if visible, else null>",
   "subject": "<subject or topic if clear, else null>",
   "class_group": "<year group or class name if visible, else null>",
   "students": [
     {
       "name": "<student name as written>",
-      "score": "<score, grade or mark if present, else null>",
+      "goal": "<the specific goal or target this student's data relates to, quoted from the document if present, else null>",
+      "goal_progress": "<progress toward that goal in the goal's own terms, e.g. '67/100 sight words', '3 of 5 prompts', '80% accuracy', else null>",
+      "score": "<raw score, grade or mark exactly as written, else null>",
       "note": "<any per-student observation or note, else null>"
     }
   ],
@@ -34,7 +36,9 @@ Respond ONLY with a valid JSON object — no preamble, no markdown fences, nothi
 
 Rules:
 - Only include fields where you found real evidence
-- Use null for anything not found — do not guess
+- Use null for anything not found. Do not guess
+- IMPORTANT: identify each student's GOAL first, then read their progress relative to that goal. The same number means different things depending on the goal (e.g. "11 prompts" is poor if the goal is "4 or fewer prompts" but good if the goal is "12 or fewer"). Never judge progress without its goal
+- If a score is present but the goal it belongs to is not on the document, set goal to null, still record the raw score, and add a flag noting the goal is unknown
 - Put every uncertainty in flags
 - confidence should honestly reflect image quality and how certain you are`;
 
@@ -121,18 +125,32 @@ export default async function handler(req, res) {
 
     let geminiParts;
     let sampleKey = null;
+    let glossaryText = '';
+
+    // Build a glossary block from teacher-specific shorthand, if provided
+    const buildGlossary = raw => {
+      if (!raw) return '';
+      try {
+        const entries = JSON.parse(raw).filter(e => e && e.abbr && e.meaning);
+        if (!entries.length) return '';
+        return `\n\nKnown teacher shorthand (expand these where they appear):\n` +
+          entries.map(e => `- "${e.abbr}" means ${e.meaning}`).join('\n');
+      } catch { return ''; }
+    };
 
     if (contentType.includes('multipart/form-data')) {
       const boundary = contentType.split('boundary=')[1]?.trim();
       if (!boundary) throw new Error('No boundary in multipart request');
       const parts = parseMultipart(rawBody, boundary);
 
+      glossaryText = buildGlossary(parts.glossary);
+
       if (parts.image?.data) {
         const base64 = parts.image.data.toString('base64');
         const mimeType = parts.image.contentType;
         geminiParts = [
           { inline_data: { mime_type: mimeType, data: base64 } },
-          { text: PROMPT }
+          { text: PROMPT + glossaryText }
         ];
       } else if (parts.sample_key) {
         sampleKey = parts.sample_key;
@@ -140,10 +158,11 @@ export default async function handler(req, res) {
     } else if (contentType.includes('application/json')) {
       const body = JSON.parse(rawBody.toString());
       sampleKey = body.sample_key;
+      glossaryText = buildGlossary(body.glossary ? JSON.stringify(body.glossary) : '');
     }
 
     if (sampleKey && SAMPLES[sampleKey]) {
-      geminiParts = [{ text: `${PROMPT}\n\nThe document is described as:\n\n${SAMPLES[sampleKey]}` }];
+      geminiParts = [{ text: `${PROMPT}${glossaryText}\n\nThe document is described as:\n\n${SAMPLES[sampleKey]}` }];
     }
 
     if (!geminiParts) return res.status(400).json({ error: 'No image or sample key provided' });
