@@ -52,7 +52,30 @@
     }
 
     .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
-    .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+    .page-subtitle { font-size: 14px; color: var(--muted); }
+
+    .list-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .new-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 99px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .new-btn:hover { background: #333; }
+    .new-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .new-form { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 24px; }
+    .nf-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+    .nf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .nf-field { display: flex; flex-direction: column; gap: 5px; }
+    .nf-field.full { grid-column: 1 / -1; }
+    .nf-field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); }
+    .nf-field input, .nf-field select { font-family: var(--sans); font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    .nf-field input:focus, .nf-field select:focus { outline: none; border-color: var(--border-strong); }
+    .nf-sub { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); margin-bottom: 8px; }
+    .nf-goalrow { display: grid; grid-template-columns: 1fr 80px 120px; gap: 10px; }
+    .nf-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .nf-error { font-size: 12px; color: var(--danger); margin-top: 10px; min-height: 14px; }
+    .btn-primary { padding: 9px 18px; border-radius: 99px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #333; }
+    .btn-ghost { padding: 9px 18px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .btn-ghost:hover { border-color: var(--border-strong); color: var(--text); }
+    @media (max-width: 560px) { .nf-grid { grid-template-columns: 1fr; } .nf-goalrow { grid-template-columns: 1fr; } }
 
     .demo-note { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 11px 13px; line-height: 1.5; margin-bottom: 28px; }
 
@@ -162,6 +185,33 @@
     return { key: 'attention', label: 'Needs attention', cls: 'status-attention' };
   }
 
+  let showForm = false;
+
+  function formHtml() {
+    return `
+      <div class="new-form">
+        <div class="nf-title">New student</div>
+        <div class="nf-grid">
+          <div class="nf-field full"><label>Name</label><input id="nfName" placeholder="e.g. Jordan Miller"></div>
+          <div class="nf-field"><label>Year group</label>
+            <select id="nfYear"><option>Year 3</option><option selected>Year 4</option><option>Year 5</option><option>Year 6</option></select>
+          </div>
+          <div class="nf-field"><label>Key worker</label><input id="nfWorker" placeholder="e.g. Miss Clarke"></div>
+        </div>
+        <div class="nf-sub">First goal (optional)</div>
+        <div class="nf-goalrow">
+          <div class="nf-field"><label>Goal</label><input id="nfGoal" placeholder="Read 100 sight words independently"></div>
+          <div class="nf-field"><label>Target</label><input id="nfTarget" type="number" placeholder="100"></div>
+          <div class="nf-field"><label>Unit</label><input id="nfUnit" placeholder="sight words"></div>
+        </div>
+        <div class="nf-error" id="nfError"></div>
+        <div class="nf-actions">
+          <button class="btn-primary" onclick="createStudent()">Add student</button>
+          <button class="btn-ghost" onclick="toggleForm()">Cancel</button>
+        </div>
+      </div>`;
+  }
+
   function renderList() {
     const rows = ROSTER.map(s => `
       <button class="roster-row" onclick="location.hash='${s.id}'">
@@ -176,10 +226,48 @@
         </span>
       </button>`).join('');
     document.getElementById('page').innerHTML = `
-      <div class="page-title">Students</div>
-      <div class="page-subtitle">Your class roster and each student's active goals.</div>
-      <div class="demo-note"><span>⚑</span><span>Demo roster. These students and goals are sample data until your IEP source is connected.</span></div>
+      <div class="list-head">
+        <div>
+          <div class="page-title">Students</div>
+          <div class="page-subtitle">Your class roster and each student's active goals.</div>
+        </div>
+        <button class="new-btn" onclick="toggleForm()"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>New student</button>
+      </div>
+      <div class="demo-note"><span>⚑</span><span>Demo roster. Sample students plus any you add (saved on this device) until your IEP source is connected.</span></div>
+      ${showForm ? formHtml() : ''}
       <div class="roster">${rows}</div>`;
+    if (showForm) document.getElementById('nfName').focus();
+  }
+
+  function toggleForm() {
+    showForm = !showForm;
+    renderList();
+  }
+
+  function slugify(name) {
+    return 'custom-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  function createStudent() {
+    const name = document.getElementById('nfName').value.trim();
+    const err = document.getElementById('nfError');
+    if (!name) { err.textContent = 'Please enter a name.'; document.getElementById('nfName').focus(); return; }
+    const year = document.getElementById('nfYear').value;
+    const worker = document.getElementById('nfWorker').value.trim() || 'Unassigned';
+    const goalText = document.getElementById('nfGoal').value.trim();
+    const target = parseInt(document.getElementById('nfTarget').value, 10);
+    const unit = document.getElementById('nfUnit').value.trim();
+
+    let id = slugify(name);
+    if (ROSTER.some(s => s.id === id)) id += '-' + (ROSTER.length + 1);
+
+    const goals = [];
+    if (goalText) {
+      goals.push({ id: id + '-g1', text: goalText, target: target > 0 ? target : 100, unit: unit || 'units', current: 0, history: [] });
+    }
+    addStudent({ id, name, year, key_worker: worker, goals });
+    showForm = false;
+    location.hash = id;
   }
 
   function renderDetail(s) {
