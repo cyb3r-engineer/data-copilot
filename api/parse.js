@@ -86,14 +86,25 @@ function parseMultipart(buffer, boundary) {
   return parts;
 }
 
-async function callGemini(parts) {
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function callGemini(parts, attempt = 0) {
+  const MAX_RETRIES = 4;
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts }] })
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'Gemini API error');
+
+  if (!res.ok) {
+    // Retry on transient overload (503) and rate limit (429) with exponential backoff
+    if ((res.status === 503 || res.status === 429) && attempt < MAX_RETRIES) {
+      await sleep(1000 * Math.pow(2, attempt)); // 1s, 2s, 4s, 8s
+      return callGemini(parts, attempt + 1);
+    }
+    throw new Error(data.error?.message || 'Gemini API error');
+  }
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
