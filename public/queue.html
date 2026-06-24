@@ -83,8 +83,12 @@
     .flag-card.resolved { border-color: #bfe0cc; background: #f3faf5; }
     .flag-q { font-size: 12px; color: var(--warn); line-height: 1.5; display: flex; gap: 7px; margin-bottom: 8px; }
     .flag-card.resolved .flag-q { color: var(--success); }
-    .flag-resolve { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: var(--sans); font-size: 13px; color: var(--text); }
+    .flag-input-row { display: flex; gap: 6px; }
+    .flag-resolve { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: var(--sans); font-size: 13px; color: var(--text); }
     .flag-resolve:focus { outline: none; border-color: #aaa49d; }
+    .flag-add-btn { flex-shrink: 0; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .flag-add-btn:hover { background: #333; }
+    .flag-add-btn:disabled { opacity: .6; cursor: default; }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
     .note-input:focus { outline: none; border-color: #aaa49d; }
     .card-actions { display: flex; gap: 8px; }
@@ -215,10 +219,13 @@
         const resolved = resolutions.find(x => x.flag === f);
         body += `
           <div class="flag-card ${resolved ? 'resolved' : ''}" id="flagcard-${c.id}-${i}">
-            <div class="flag-q"><span>↳</span><span>${f}</span></div>
-            <input class="flag-resolve" id="flagres-${c.id}-${i}" data-flag="${encodeURIComponent(f)}"
-              placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
-              oninput="document.getElementById('flagcard-${c.id}-${i}').classList.toggle('resolved', this.value.trim().length > 0)">
+            <div class="flag-q"><span>${resolved ? '✓' : '↳'}</span><span>${f}</span></div>
+            <div class="flag-input-row">
+              <input class="flag-resolve" id="flagres-${c.id}-${i}" data-flag="${encodeURIComponent(f)}"
+                placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();saveResolution('${c.id}',${i})}">
+              <button class="flag-add-btn" onclick="saveResolution('${c.id}',${i})">${resolved ? 'Update' : 'Add'}</button>
+            </div>
           </div>`;
       });
       body += `</div>`;
@@ -250,6 +257,40 @@
 
   function toggleCard(id) {
     document.getElementById(`card-${id}`).classList.toggle('expanded');
+  }
+
+  async function saveResolution(id, index) {
+    const input = document.getElementById(`flagres-${id}-${index}`);
+    const val = input.value.trim();
+    if (!val) { input.focus(); return; }
+
+    const capture = allCaptures.find(c => c.id === id);
+    if (!capture) return;
+    const flag = decodeURIComponent(input.dataset.flag);
+    const result_json = { ...capture.result_json };
+    const resolutions = (result_json.flag_resolutions || []).filter(x => x.flag !== flag);
+    resolutions.push({ flag, resolution: val });
+    result_json.flag_resolutions = resolutions;
+
+    const btn = input.nextElementSibling;
+    const prevLabel = btn.textContent;
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+    try {
+      await fetch('/api/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: capture.status, teacher_note: document.getElementById(`note-${id}`)?.value || capture.teacher_note, result_json })
+      });
+      capture.result_json = result_json; // keep local state in sync without re-rendering
+      document.getElementById(`flagcard-${id}-${index}`).classList.add('resolved');
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { btn.textContent = 'Update'; btn.disabled = false; }, 1200);
+    } catch(e) {
+      btn.textContent = prevLabel;
+      btn.disabled = false;
+      alert('Save failed: ' + e.message);
+    }
   }
 
   async function updateCapture(id, status) {
