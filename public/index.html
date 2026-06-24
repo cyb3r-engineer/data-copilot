@@ -70,6 +70,16 @@
     .loading { font-size: 14px; color: var(--hint); padding: 20px 0; display: flex; align-items: center; gap: 8px; }
     .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Upload button */
+    .upload-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--text); color: #fff; border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
+    .upload-btn:hover { background: #333; }
+    .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .upload-btn.uploading { opacity: .6; pointer-events: none; }
+    .upload-area { margin-bottom: 40px; display: flex; align-items: center; gap: 14px; }
+    .upload-status { font-size: 13px; color: var(--muted); }
+    .upload-status.success { color: var(--success); }
+    .upload-status.error { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -80,11 +90,18 @@
     <a class="nav-link active" href="/">Home</a>
     <a class="nav-link" href="/queue.html">Review queue</a>
   </nav>
+  <button class="upload-btn" id="uploadBtn" style="margin-left:16px">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+    Upload
+    <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+  </button>
 </header>
 
 <div class="page">
   <div class="greeting">Good <span id="timeOfDay">day</span>.</div>
   <div class="greeting-sub">Here's where things stand.</div>
+
+  <span class="upload-status" id="uploadStatus" style="display:block;font-size:13px;margin-bottom:24px;min-height:20px"></span>
 
   <div id="stats" class="stat-row">
     <div class="stat-card"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>
@@ -176,6 +193,29 @@
       document.getElementById('flaggedList').innerHTML = `<div class="empty" style="color:var(--danger)">${e.message}</div>`;
       document.getElementById('recentList').innerHTML = '';
     }
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    const btn = document.getElementById('uploadBtn');
+    const status = document.getElementById('uploadStatus');
+    btn.classList.add('uploading');
+    status.className = 'upload-status';
+    status.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/parse', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      status.className = 'upload-status success';
+      status.textContent = 'Saved to review queue ✓';
+      load();
+    } catch(e) {
+      status.className = 'upload-status error';
+      status.textContent = e.message;
+    }
+    btn.classList.remove('uploading');
   }
 
   load();
