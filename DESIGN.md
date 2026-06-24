@@ -6,6 +6,8 @@ colors:
   surface: "#faf8f5"
   surface-sunk: "#f0ede8"
   border: "#e8e3dc"
+  border-hover: "#ccc6be"
+  border-strong: "#aaa49d"
   ink: "#1a1a1a"
   muted: "#888077"
   hint: "#b8b0a5"
@@ -137,6 +139,8 @@ signal colors (green/amber/red) that appear only to mean something.
   half-step lighter than paper to read as lifted without a shadow.
 - **Surface Sunk** (#f0ede8): Avatars and inset chips; reads as recessed.
 - **Border** (#e8e3dc): Hairline dividers, card outlines, row separators.
+- **Border Hover** (#ccc6be): A firmer step for control borders on hover (filter chips).
+- **Border Strong** (#aaa49d): Focus borders on inputs and the firmest divider step.
 - **Muted** (#888077): Secondary text — labels, timestamps, nav at rest.
 - **Hint** (#b8b0a5): Decorative/tertiary only (placeholder arrows, empty-state
   text). Never load-bearing body copy.

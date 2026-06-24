@@ -17,33 +17,60 @@
       --hint: #b8b0a5;
       --accent: #1a1a1a;
       --accent-light: #f0ede8;
+      --border-hover: #ccc6be;
+      --border-strong: #aaa49d;
+      --warn-border: #e4d3b8;
       --success: #2d7a4f;
       --warn: #a06b1a;
       --danger: #c0392b;
       --sans: 'Inter', system-ui, sans-serif;
       --radius: 12px;
     }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
-    /* Header */
-    header { padding: 16px 32px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
     .logo-mark { font-size: 18px; }
-    header h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
-    nav { margin-left: auto; display: flex; gap: 24px; }
-    .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; font-weight: 400; transition: color .15s; }
-    .nav-link:hover { color: var(--text); }
-    .nav-link.active { color: var(--text); font-weight: 500; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .side-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .side-link:hover { background: var(--accent-light); color: var(--text); }
+    .side-link.active { background: var(--accent-light); color: var(--text); }
+    .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+    .upload-btn { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
+    .upload-btn:hover { background: #333; }
+    .upload-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .upload-btn.uploading { opacity: .6; pointer-events: none; }
+    .upload-status { font-size: 12px; color: var(--muted); text-align: center; min-height: 16px; }
+    .upload-status.success { color: var(--success); }
+    .upload-status.error { color: var(--danger); }
 
+    main.content { margin-left: 220px; flex: 1; min-width: 0; }
     /* Page */
     .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { position: sticky; width: auto; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; }
+      .sidebar-brand { padding: 0 14px 0 6px; }
+      .sidebar-nav { flex-direction: row; gap: 4px; }
+      .side-link span { display: none; }
+      .side-link { padding: 9px; }
+      .sidebar-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; }
+      .upload-btn { width: auto; }
+      .upload-status { display: none; }
+      main.content { margin-left: 0; }
+    }
     .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
     .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
 
     /* Filters */
     .filter-row { display: flex; gap: 6px; margin-bottom: 28px; }
     .filter-btn { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
-    .filter-btn:hover { border-color: #ccc6be; color: var(--text); }
-    .filter-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-btn.active { background: var(--text); color: var(--surface); border-color: var(--text); }
 
     /* Section label */
     .section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 12px; }
@@ -85,23 +112,23 @@
     .flag-card.resolved .flag-q { color: var(--success); }
     .flag-input-row { display: flex; gap: 6px; }
     .flag-resolve { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: var(--sans); font-size: 13px; color: var(--text); }
-    .flag-resolve:focus { outline: none; border-color: #aaa49d; }
-    .flag-add-btn { flex-shrink: 0; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .flag-resolve:focus { outline: none; border-color: var(--border-strong); }
+    .flag-add-btn { flex-shrink: 0; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
     .flag-add-btn:hover { background: #333; }
     .flag-add-btn:disabled { opacity: .6; cursor: default; }
     .flag-resolved-msg { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--success); }
     .flag-resolved-msg span { flex: 1; }
     .flag-resolved-msg strong { font-weight: 600; color: var(--text); }
     .flag-edit-btn { flex-shrink: 0; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
-    .flag-edit-btn:hover { border-color: #aaa49d; color: var(--text); }
+    .flag-edit-btn:hover { border-color: var(--border-strong); color: var(--text); }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
-    .note-input:focus { outline: none; border-color: #aaa49d; }
+    .note-input:focus { outline: none; border-color: var(--border-strong); }
     .card-actions { display: flex; gap: 8px; }
     .card-btn { padding: 8px 16px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
-    .card-btn:hover { border-color: #aaa49d; color: var(--text); }
-    .card-btn.approve { background: var(--text); color: #fff; border-color: var(--text); }
+    .card-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .card-btn.approve { background: var(--text); color: var(--surface); border-color: var(--text); }
     .card-btn.approve:hover { background: #333; }
-    .card-btn.flag { color: var(--warn); border-color: #d4b896; }
+    .card-btn.flag { color: var(--warn); border-color: var(--warn-border); }
 
     /* States */
     .loading-state { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px; color: var(--muted); font-size: 14px; }
@@ -112,15 +139,29 @@
   </style>
 </head>
 <body>
-<header>
-  <span class="logo-mark">✦</span>
-  <h1>Data Co-Pilot</h1>
-  <nav>
-    <a class="nav-link" href="/">Home</a>
-    <a class="nav-link active" href="/queue.html">Review queue</a>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
+  <nav class="sidebar-nav">
+    <a class="side-link" href="/">
+      <svg viewBox="0 0 20 20"><path d="M3 8.5L10 3l7 5.5"/><path d="M5 7.5V16h10V7.5"/><path d="M8.5 16v-4h3v4"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="side-link active" href="/queue.html">
+      <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
+      <span>Review queue</span>
+    </a>
   </nav>
-</header>
+  <div class="sidebar-foot">
+    <button class="upload-btn" id="uploadBtn">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+      Upload
+      <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+    </button>
+    <span class="upload-status" id="uploadStatus"></span>
+  </div>
+</aside>
 
+<main class="content">
 <div class="page">
   <div class="page-title">Review queue</div>
   <div class="page-subtitle">Captured documents waiting for your review.</div>
@@ -136,6 +177,7 @@
     <div class="loading-state"><div class="spinner"></div>Loading…</div>
   </div>
 </div>
+</main>
 
 <script>
   let allCaptures = [];
@@ -351,6 +393,30 @@
     } catch(e) {
       alert('Update failed: ' + e.message);
     }
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    const btn = document.getElementById('uploadBtn');
+    const status = document.getElementById('uploadStatus');
+    btn.classList.add('uploading');
+    status.className = 'upload-status';
+    status.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/parse', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      status.className = 'upload-status success';
+      status.textContent = 'Added ✓';
+      await loadQueue();
+      setTimeout(() => { status.textContent = ''; status.className = 'upload-status'; }, 2500);
+    } catch(e) {
+      status.className = 'upload-status error';
+      status.textContent = e.message;
+    }
+    btn.classList.remove('uploading');
   }
 
   loadQueue();

@@ -21,17 +21,32 @@
       --danger: #c0392b;
       --sans: 'Inter', system-ui, sans-serif;
     }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
-    header { padding: 16px 32px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
     .logo-mark { font-size: 18px; }
-    header h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
-    nav { margin-left: auto; display: flex; gap: 24px; }
-    .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; font-weight: 400; transition: color .15s; }
-    .nav-link:hover { color: var(--text); }
-    .nav-link.active { color: var(--text); font-weight: 500; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .side-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .side-link:hover { background: var(--accent-light); color: var(--text); }
+    .side-link.active { background: var(--accent-light); color: var(--text); }
+    .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
 
+    main.content { margin-left: 220px; flex: 1; min-width: 0; }
     .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { position: sticky; width: auto; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; }
+      .sidebar-brand { padding: 0 14px 0 6px; }
+      .sidebar-nav { flex-direction: row; gap: 4px; }
+      .side-link span { display: none; }
+      .side-link { padding: 9px; }
+      .sidebar-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; }
+      main.content { margin-left: 0; }
+    }
 
     .greeting { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
     .greeting-sub { font-size: 14px; color: var(--muted); margin-bottom: 40px; }
@@ -72,7 +87,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Upload button */
-    .upload-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--text); color: #fff; border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
+    .upload-btn { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
     .upload-btn:hover { background: #333; }
     .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
     .upload-btn.uploading { opacity: .6; pointer-events: none; }
@@ -83,20 +98,28 @@
   </style>
 </head>
 <body>
-<header>
-  <span class="logo-mark">✦</span>
-  <h1>Data Co-Pilot</h1>
-  <nav>
-    <a class="nav-link active" href="/">Home</a>
-    <a class="nav-link" href="/queue.html">Review queue</a>
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
+  <nav class="sidebar-nav">
+    <a class="side-link active" href="/">
+      <svg viewBox="0 0 20 20"><path d="M3 8.5L10 3l7 5.5"/><path d="M5 7.5V16h10V7.5"/><path d="M8.5 16v-4h3v4"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="side-link" href="/queue.html">
+      <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
+      <span>Review queue</span>
+    </a>
   </nav>
-  <button class="upload-btn" id="uploadBtn" style="margin-left:16px">
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
-    Upload
-    <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
-  </button>
-</header>
+  <div class="sidebar-foot">
+    <button class="upload-btn" id="uploadBtn">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+      Upload
+      <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+    </button>
+  </div>
+</aside>
 
+<main class="content">
 <div class="page">
   <div class="greeting">Good <span id="timeOfDay">day</span>.</div>
   <div class="greeting-sub">Here's where things stand.</div>
@@ -125,6 +148,7 @@
     <div id="recentList" class="loading"><div class="spinner"></div>Loading…</div>
   </div>
 </div>
+</main>
 
 <script>
   const hour = new Date().getHours();
