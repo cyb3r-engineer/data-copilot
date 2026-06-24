@@ -125,6 +125,23 @@
     .history-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 3px 0; }
     .history-row .hv { color: var(--text); }
 
+    /* Related documents */
+    .doc-list { display: flex; flex-direction: column; }
+    .doc-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit; transition: opacity .15s; }
+    .doc-row:last-child { border-bottom: 1px solid var(--border); }
+    .doc-row:hover { opacity: .7; }
+    .doc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-needs-review { background: var(--warn); }
+    .dot-ready { background: var(--success); }
+    .dot-approved { background: var(--hint); }
+    .doc-summary { font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .doc-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .doc-match { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+    .doc-match.auto { color: var(--muted); background: var(--accent-light); border: 1px solid var(--border); }
+    .doc-match.linked { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+    .doc-time { font-size: 12px; color: var(--hint); }
+    .doc-empty { font-size: 13px; color: var(--hint); padding: 14px 0; line-height: 1.6; }
+
     /* Floating upload button */
     .fab-upload { position: fixed; top: 18px; right: 26px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden; transition: background .15s; }
     .fab-upload:hover { background: #333; }
@@ -357,7 +374,78 @@
         </div>
       </div>
       <div class="section-label">Active goals (${s.goals.length})</div>
-      ${goals}`;
+      ${goals}
+      <div class="section-label" style="margin-top:32px">Related documents</div>
+      <div id="relatedDocs"><div class="doc-empty">Loading…</div></div>`;
+    loadRelatedDocs(s);
+  }
+
+  function tokens(s) { return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean); }
+
+  // A capture's extracted student name matches this roster student
+  function matchesStudent(name, student) {
+    const en = tokens(name), sn = tokens(student.name);
+    if (!en.length || !sn.length || en[0] !== sn[0]) return false;
+    if (en.length === 1) return true; // only a first name was written
+    const last = en[en.length - 1];
+    return sn.slice(1).some(part => part.startsWith(last) || last.startsWith(part));
+  }
+
+  function getDocLinks() {
+    try { return JSON.parse(localStorage.getItem('dc_doc_links')) || []; } catch (e) { return []; }
+  }
+
+  function timeAgo(ts) {
+    const diff = Date.now() - new Date(ts);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  function dotClass(status) {
+    if (status === 'needs_review') return 'dot-needs-review';
+    if (status === 'approved') return 'dot-approved';
+    return 'dot-ready';
+  }
+
+  function docRow(c, linked) {
+    const r = c.result_json || {};
+    return `
+      <a class="doc-row" href="/queue.html">
+        <span class="doc-dot ${dotClass(c.status)}"></span>
+        <span class="doc-summary">${r.summary || 'Untitled capture'}</span>
+        <span class="doc-right">
+          <span class="doc-match ${linked ? 'linked' : 'auto'}">${linked ? 'Linked' : 'Auto-matched'}</span>
+          <span class="doc-tag" style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">${r.doc_type || '—'}</span>
+          <span class="doc-time">${timeAgo(c.created_at)}</span>
+        </span>
+      </a>`;
+  }
+
+  async function loadRelatedDocs(student) {
+    const el = document.getElementById('relatedDocs');
+    if (!el) return;
+    try {
+      const res = await fetch('/api/queue');
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Could not load');
+      const links = getDocLinks();
+      const related = (data.captures || []).map(c => {
+        const isLinked = links.some(l => l.c === c.id && l.s === student.id);
+        const isAuto = ((c.result_json && c.result_json.students) || []).some(st => matchesStudent(st.name, student));
+        return (isLinked || isAuto) ? { c, linked: isLinked } : null;
+      }).filter(Boolean);
+      if (!related.length) {
+        el.innerHTML = `<div class="doc-empty">No documents matched to ${student.name.split(' ')[0]} yet. Upload a sheet, or link one from the review queue, and it will appear here.</div>`;
+        return;
+      }
+      el.innerHTML = `<div class="doc-list">${related.map(({ c, linked }) => docRow(c, linked)).join('')}</div>`;
+    } catch (e) {
+      el.innerHTML = `<div class="doc-empty">Couldn't load documents: ${e.message}</div>`;
+    }
   }
 
   function route() {

@@ -134,7 +134,14 @@
     .flag-edit-btn:hover { border-color: var(--border-strong); color: var(--text); }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
     .note-input:focus { outline: none; border-color: var(--border-strong); }
-    .card-actions { display: flex; gap: 8px; }
+    .link-row { margin-top: 16px; }
+    .linked-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .linked-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 99px; padding: 4px 6px 4px 11px; }
+    .linked-chip button { background: none; border: none; color: var(--success); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 99px; }
+    .linked-chip button:hover { color: var(--danger); }
+    .link-select { font-family: var(--sans); font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+    .link-select:focus { outline: none; border-color: var(--border-strong); }
+    .card-actions { display: flex; gap: 8px; margin-top: 16px; }
     .card-btn { padding: 8px 16px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
     .card-btn:hover { border-color: var(--border-strong); color: var(--text); }
     .card-btn.approve { background: var(--text); color: var(--surface); border-color: var(--text); }
@@ -197,6 +204,7 @@
 </div>
 </main>
 
+<script src="/roster.js"></script>
 <script>
   let allCaptures = [];
   let activeFilter = 'all';
@@ -254,6 +262,26 @@
     if (status === 'needs_review') return 'dot-needs-review';
     if (status === 'approved') return 'dot-approved';
     return 'dot-ready';
+  }
+
+  // --- Document ↔ student links (shared with the Students page via localStorage) ---
+  function getDocLinks() { try { return JSON.parse(localStorage.getItem('dc_doc_links')) || []; } catch (e) { return []; } }
+  function saveDocLinks(l) { localStorage.setItem('dc_doc_links', JSON.stringify(l)); }
+  function studentName(id) { const s = (window.ROSTER || []).find(x => x.id === id); return s ? s.name : id; }
+  function linkedChips(captureId) {
+    const links = getDocLinks().filter(l => l.c === captureId);
+    if (!links.length) return '<span style="font-size:12px;color:var(--hint)">None yet</span>';
+    return links.map(l => `<span class="linked-chip">${studentName(l.s)}<button title="Unlink" onclick="unlinkDoc('${captureId}','${l.s}')">×</button></span>`).join('');
+  }
+  function linkDoc(captureId, studentId) {
+    if (!studentId) return;
+    const links = getDocLinks();
+    if (!links.some(l => l.c === captureId && l.s === studentId)) { links.push({ c: captureId, s: studentId }); saveDocLinks(links); }
+    document.getElementById('linked-' + captureId).innerHTML = linkedChips(captureId);
+  }
+  function unlinkDoc(captureId, studentId) {
+    saveDocLinks(getDocLinks().filter(l => !(l.c === captureId && l.s === studentId)));
+    document.getElementById('linked-' + captureId).innerHTML = linkedChips(captureId);
   }
 
   function flagInputType(flag) {
@@ -325,6 +353,14 @@
     }
 
     body += `
+      <div class="link-row">
+        <div class="section-label">Linked students</div>
+        <div class="linked-chips" id="linked-${c.id}">${linkedChips(c.id)}</div>
+        <select class="link-select" onchange="linkDoc('${c.id}', this.value); this.value='';">
+          <option value="">+ Link a student…</option>
+          ${(window.ROSTER || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+        </select>
+      </div>
       <div class="section-label" style="margin-top:16px">Teacher note</div>
       <textarea class="note-input" id="note-${c.id}" placeholder="Add a note before approving…">${c.teacher_note || ''}</textarea>
       <div class="card-actions">
