@@ -16,13 +16,16 @@ export default async function handler(req, res) {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const body = JSON.parse(Buffer.concat(chunks).toString());
-    const { id, status, teacher_note } = body;
+    const { id, status, teacher_note, result_json } = body;
 
     if (!id) return res.status(400).json({ error: 'id required' });
 
+    const update = { status, teacher_note, reviewed_at: new Date().toISOString() };
+    if (result_json !== undefined) update.result_json = result_json;
+
     const { error } = await supabase
       .from('captures')
-      .update({ status, teacher_note, reviewed_at: new Date().toISOString() })
+      .update(update)
       .eq('id', id);
 
     if (error) throw error;

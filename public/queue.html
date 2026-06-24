@@ -78,8 +78,13 @@
     .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-light); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
     .student-name { font-size: 13px; flex: 1; }
     .student-score { font-size: 13px; font-weight: 500; color: var(--muted); }
-    .flag-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .flag-item { font-size: 12px; color: var(--warn); line-height: 1.5; display: flex; gap: 7px; }
+    .flag-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .flag-card { border: 1px solid #e4d3b8; background: #fdf9f1; border-radius: 8px; padding: 11px 12px; transition: all .15s; }
+    .flag-card.resolved { border-color: #bfe0cc; background: #f3faf5; }
+    .flag-q { font-size: 12px; color: var(--warn); line-height: 1.5; display: flex; gap: 7px; margin-bottom: 8px; }
+    .flag-card.resolved .flag-q { color: var(--success); }
+    .flag-resolve { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: var(--sans); font-size: 13px; color: var(--text); }
+    .flag-resolve:focus { outline: none; border-color: #aaa49d; }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
     .note-input:focus { outline: none; border-color: #aaa49d; }
     .card-actions { display: flex; gap: 8px; }
@@ -204,8 +209,18 @@
     }
 
     if (flags.length) {
-      body += `<div class="section-label" style="margin-top:16px">Flags (${flags.length})</div><div class="flag-list">`;
-      for (const f of flags) body += `<div class="flag-item"><span>↳</span><span>${f}</span></div>`;
+      const resolutions = (r.flag_resolutions || []);
+      body += `<div class="section-label" style="margin-top:16px">Needs your input (${flags.length})</div><div class="flag-list">`;
+      flags.forEach((f, i) => {
+        const resolved = resolutions.find(x => x.flag === f);
+        body += `
+          <div class="flag-card ${resolved ? 'resolved' : ''}" id="flagcard-${c.id}-${i}">
+            <div class="flag-q"><span>↳</span><span>${f}</span></div>
+            <input class="flag-resolve" id="flagres-${c.id}-${i}" data-flag="${encodeURIComponent(f)}"
+              placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
+              oninput="document.getElementById('flagcard-${c.id}-${i}').classList.toggle('resolved', this.value.trim().length > 0)">
+          </div>`;
+      });
       body += `</div>`;
     }
 
@@ -239,11 +254,24 @@
 
   async function updateCapture(id, status) {
     const note = document.getElementById(`note-${id}`)?.value || '';
+
+    // Collect any flag resolutions the teacher filled in
+    const capture = allCaptures.find(c => c.id === id);
+    const result_json = capture ? { ...capture.result_json } : undefined;
+    if (result_json) {
+      const resolutions = [];
+      document.querySelectorAll(`[id^="flagres-${id}-"]`).forEach(inp => {
+        const val = inp.value.trim();
+        if (val) resolutions.push({ flag: decodeURIComponent(inp.dataset.flag), resolution: val });
+      });
+      result_json.flag_resolutions = resolutions;
+    }
+
     try {
       await fetch('/api/update', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status, teacher_note: note })
+        body: JSON.stringify({ id, status, teacher_note: note, result_json })
       });
       await loadQueue();
     } catch(e) {
