@@ -86,18 +86,29 @@
     .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Upload button */
-    .upload-btn { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
-    .upload-btn:hover { background: #333; }
-    .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-    .upload-btn.uploading { opacity: .6; pointer-events: none; }
-    .upload-area { margin-bottom: 40px; display: flex; align-items: center; gap: 14px; }
-    .upload-status { font-size: 13px; color: var(--muted); }
-    .upload-status.success { color: var(--success); }
-    .upload-status.error { color: var(--danger); }
+    /* Floating upload button */
+    .fab-upload { position: fixed; top: 18px; right: 26px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden; transition: background .15s, transform .15s; }
+    .fab-upload:hover { background: #333; }
+    .fab-upload svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .fab-upload.uploading { opacity: .6; pointer-events: none; }
+    .fab-status { position: fixed; top: 54px; right: 26px; z-index: 50; font-size: 12px; color: var(--muted); text-align: right; }
+    .fab-status.success { color: var(--success); }
+    .fab-status.error { color: var(--danger); }
+    @media (max-width: 700px) {
+      .fab-upload { top: auto; bottom: 20px; right: 20px; }
+      .fab-status { top: auto; bottom: 58px; right: 20px; }
+    }
   </style>
 </head>
 <body>
+<button class="fab-upload" id="uploadBtn">
+  <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+  Upload
+  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+</button>
+<span class="fab-status" id="uploadStatus"></span>
+
 <aside class="sidebar">
   <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
   <nav class="sidebar-nav">
@@ -110,21 +121,12 @@
       <span>Review queue</span>
     </a>
   </nav>
-  <div class="sidebar-foot">
-    <button class="upload-btn" id="uploadBtn">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
-      Upload
-      <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
-    </button>
-  </div>
 </aside>
 
 <main class="content">
 <div class="page">
   <div class="greeting">Good <span id="timeOfDay">day</span>.</div>
   <div class="greeting-sub">Here's where things stand.</div>
-
-  <span class="upload-status" id="uploadStatus" style="display:block;font-size:13px;margin-bottom:24px;min-height:20px"></span>
 
   <div id="stats" class="stat-row">
     <div class="stat-card"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>

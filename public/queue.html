@@ -38,14 +38,16 @@
     .side-link:hover { background: var(--accent-light); color: var(--text); }
     .side-link.active { background: var(--accent-light); color: var(--text); }
     .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
-    .upload-btn { display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; position: relative; overflow: hidden; }
-    .upload-btn:hover { background: #333; }
-    .upload-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-    .upload-btn.uploading { opacity: .6; pointer-events: none; }
-    .upload-status { font-size: 12px; color: var(--muted); text-align: center; min-height: 16px; }
-    .upload-status.success { color: var(--success); }
-    .upload-status.error { color: var(--danger); }
+
+    /* Floating upload button */
+    .fab-upload { position: fixed; top: 18px; right: 26px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden; transition: background .15s, transform .15s; }
+    .fab-upload:hover { background: #333; }
+    .fab-upload svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .fab-upload.uploading { opacity: .6; pointer-events: none; }
+    .fab-status { position: fixed; top: 54px; right: 26px; z-index: 50; font-size: 12px; color: var(--muted); text-align: right; }
+    .fab-status.success { color: var(--success); }
+    .fab-status.error { color: var(--danger); }
 
     main.content { margin-left: 220px; flex: 1; min-width: 0; }
     /* Page */
@@ -59,9 +61,9 @@
       .side-link span { display: none; }
       .side-link { padding: 9px; }
       .sidebar-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; }
-      .upload-btn { width: auto; }
-      .upload-status { display: none; }
       main.content { margin-left: 0; }
+      .fab-upload { top: auto; bottom: 20px; right: 20px; }
+      .fab-status { top: auto; bottom: 58px; right: 20px; }
     }
     .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
     .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
@@ -139,6 +141,13 @@
   </style>
 </head>
 <body>
+<button class="fab-upload" id="uploadBtn">
+  <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+  Upload
+  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+</button>
+<span class="fab-status" id="uploadStatus"></span>
+
 <aside class="sidebar">
   <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
   <nav class="sidebar-nav">
@@ -151,14 +160,6 @@
       <span>Review queue</span>
     </a>
   </nav>
-  <div class="sidebar-foot">
-    <button class="upload-btn" id="uploadBtn">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
-      Upload
-      <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
-    </button>
-    <span class="upload-status" id="uploadStatus"></span>
-  </div>
 </aside>
 
 <main class="content">

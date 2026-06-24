@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-06-24T00:00:00.000Z",
+  "generatedAt": "2026-06-24T12:00:00.000Z",
   "title": "Design System: Data Co-Pilot",
   "extensions": {
     "colorMeta": {
@@ -8,6 +8,8 @@
       "surface": { "role": "neutral", "displayName": "Raised Surface", "canonical": "#faf8f5", "tonalRamp": ["#2d2b27", "#494640", "#666158", "#867f73", "#a8a094", "#cbc4b6", "#e6e1d6", "#faf8f5"] },
       "ink": { "role": "primary", "displayName": "Ink Near-Black", "canonical": "#1a1a1a", "tonalRamp": ["#1a1a1a", "#333333", "#4d4d4d", "#666666", "#888077", "#b8b0a5", "#d8d2c8", "#f0ede8"] },
       "muted": { "role": "neutral", "displayName": "Muted Stone", "canonical": "#888077", "tonalRamp": ["#26241f", "#3d3a33", "#555148", "#6e695e", "#888077", "#a89f90", "#c9c2b4", "#ece7dc"] },
+      "border-hover": { "role": "neutral", "displayName": "Border Hover", "canonical": "#ccc6be", "tonalRamp": ["#2a2723", "#46423b", "#635d53", "#847d70", "#a59d8f", "#ccc6be", "#e0dbd2", "#f2efe9"] },
+      "border-strong": { "role": "neutral", "displayName": "Border Strong", "canonical": "#aaa49d", "tonalRamp": ["#26231f", "#3d3a34", "#555149", "#6e6960", "#888077", "#aaa49d", "#cbc6bf", "#ece9e3"] },
       "success": { "role": "tertiary", "displayName": "Approved Green", "canonical": "#2d7a4f", "tonalRamp": ["#0f2a1c", "#16432c", "#1e5d3c", "#27744d", "#2d7a4f", "#5aa57c", "#93cbac", "#f3faf5"] },
       "warn": { "role": "tertiary", "displayName": "Flag Amber", "canonical": "#a06b1a", "tonalRamp": ["#2a1c08", "#43300f", "#5d4416", "#7a5a1d", "#a06b1a", "#c79a52", "#e4cb98", "#fdf9f1"] },
       "danger": { "role": "tertiary", "displayName": "Error Red", "canonical": "#c0392b", "tonalRamp": ["#2e0e0a", "#4a1611", "#661f17", "#8a2a1f", "#c0392b", "#d57063", "#e8a89f", "#fbeeec"] }
