@@ -196,6 +196,23 @@
     return 'dot-ready';
   }
 
+  function flagInputType(flag) {
+    return /\b(date|year|when|day|month|dob|d\.o\.b|birth|deadline|due)\b/i.test(flag) ? 'date' : 'text';
+  }
+
+  function flagInputRow(id, index, flagEnc, value, flagText, btnLabel) {
+    const type = flagInputType(flagText);
+    const v = (value || '').replace(/"/g, '&quot;');
+    const placeholder = type === 'date' ? '' : 'Add the missing info…';
+    return `
+      <div class="flag-input-row">
+        <input class="flag-resolve" type="${type}" id="flagres-${id}-${index}" data-flag="${flagEnc}"
+          placeholder="${placeholder}" value="${v}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();saveResolution('${id}',${index})}">
+        <button class="flag-add-btn" onclick="saveResolution('${id}',${index})">${btnLabel}</button>
+      </div>`;
+  }
+
   function cardHtml(c) {
     const r = c.result_json || {};
     const students = r.students || [];
@@ -225,12 +242,7 @@
         body += `
           <div class="flag-card ${resolved ? 'resolved' : ''}" id="flagcard-${c.id}-${i}">
             <div class="flag-q"><span>${resolved ? '✓' : '↳'}</span><span>${f}</span></div>
-            <div class="flag-input-row">
-              <input class="flag-resolve" id="flagres-${c.id}-${i}" data-flag="${encodeURIComponent(f)}"
-                placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();saveResolution('${c.id}',${i})}">
-              <button class="flag-add-btn" onclick="saveResolution('${c.id}',${i})">${resolved ? 'Update' : 'Add'}</button>
-            </div>
+            ${flagInputRow(c.id, i, encodeURIComponent(f), resolved ? resolved.resolution : '', f, resolved ? 'Update' : 'Add')}
           </div>`;
       });
       body += `</div>`;
@@ -310,12 +322,7 @@
     const card = document.getElementById(`flagcard-${id}-${index}`);
     card.innerHTML = `
       <div class="flag-q"><span>↳</span><span>${flag}</span></div>
-      <div class="flag-input-row">
-        <input class="flag-resolve" id="flagres-${id}-${index}" data-flag="${flagEnc}"
-          placeholder="Add the missing info…" value="${resolved ? resolved.resolution.replace(/"/g, '&quot;') : ''}"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();saveResolution('${id}',${index})}">
-        <button class="flag-add-btn" onclick="saveResolution('${id}',${index})">Update</button>
-      </div>`;
+      ${flagInputRow(id, index, flagEnc, resolved ? resolved.resolution : '', flag, 'Update')}`;
     document.getElementById(`flagres-${id}-${index}`).focus();
   }
 
