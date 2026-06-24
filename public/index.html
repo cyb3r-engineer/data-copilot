@@ -92,6 +92,31 @@
     .type-chip .count { font-weight: 600; }
     .type-chip .label { color: var(--muted); text-transform: capitalize; }
 
+    /* Notation memory */
+    .notation { margin-bottom: 36px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .notation summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+    .notation summary::-webkit-details-marker { display: none; }
+    .notation summary svg { width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .notation summary .n-count { font-weight: 400; color: var(--hint); }
+    .notation summary .chev { margin-left: auto; color: var(--hint); font-size: 11px; transition: transform .2s; }
+    .notation[open] summary .chev { transform: rotate(180deg); }
+    .notation-body { padding: 0 18px 16px; }
+    .notation-hint { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .glossary-list { display: flex; flex-direction: column; margin-bottom: 12px; }
+    .glossary-item { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 8px 0; border-top: 1px solid var(--border); }
+    .glossary-abbr { font-weight: 600; min-width: 70px; }
+    .glossary-arrow { color: var(--hint); }
+    .glossary-meaning { flex: 1; color: var(--muted); }
+    .glossary-remove { background: none; border: none; color: var(--hint); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+    .glossary-remove:hover { color: var(--danger); }
+    .glossary-add { display: flex; gap: 6px; }
+    .glossary-add input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: var(--sans); font-size: 13px; color: var(--text); }
+    .glossary-add input:focus { outline: none; border-color: var(--border-strong); }
+    .glossary-add .abbr-in { width: 96px; flex-shrink: 0; }
+    .glossary-add .mean-in { flex: 1; }
+    .glossary-add button { flex-shrink: 0; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .glossary-add button:hover { background: #333; }
+
     /* Capture rows */
     .capture-list { display: flex; flex-direction: column; }
     .capture-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit; transition: opacity .15s; }
@@ -161,6 +186,24 @@
     <div class="cz-sub">Snap or drop a photo of an assessment sheet, IEP progress, behaviour note or observation. We'll pull out the data for you to review.</div>
     <div class="cz-status" id="captureStatus"></div>
   </div>
+
+  <details class="notation" id="notation">
+    <summary>
+      <svg viewBox="0 0 20 20"><path d="M3 5h10l4 5-4 5H3z"/><path d="M7 10h.01"/></svg>
+      Teacher shorthand
+      <span class="n-count" id="notationCount"></span>
+      <span class="chev">▾</span>
+    </summary>
+    <div class="notation-body">
+      <div class="notation-hint">Add abbreviations you use on your sheets so we read them correctly. These are remembered on this device and applied to every upload (e.g. <strong>MM</strong> → morning meeting).</div>
+      <div class="glossary-list" id="glossaryList"></div>
+      <div class="glossary-add">
+        <input class="abbr-in" id="abbrIn" placeholder="MM" maxlength="24">
+        <input class="mean-in" id="meanIn" placeholder="morning meeting" onkeydown="if(event.key==='Enter')addGlossary()">
+        <button onclick="addGlossary()">Add</button>
+      </div>
+    </div>
+  </details>
 
   <div class="stat-strip">
     <div class="stat-cell"><div class="stat-label">This week</div><div class="stat-value" id="statTotal">—</div></div>
@@ -290,6 +333,43 @@
     }
   }
 
+  // Teacher shorthand glossary (remembered on this device)
+  const GLOSSARY_KEY = 'dc_glossary';
+  function getGlossary() {
+    try { return JSON.parse(localStorage.getItem(GLOSSARY_KEY)) || []; } catch { return []; }
+  }
+  function saveGlossary(g) { localStorage.setItem(GLOSSARY_KEY, JSON.stringify(g)); }
+  function renderGlossary() {
+    const g = getGlossary();
+    document.getElementById('notationCount').textContent = g.length ? `· ${g.length}` : '';
+    const list = document.getElementById('glossaryList');
+    list.innerHTML = g.map((e, i) => `
+      <div class="glossary-item">
+        <span class="glossary-abbr">${e.abbr}</span>
+        <span class="glossary-arrow">→</span>
+        <span class="glossary-meaning">${e.meaning}</span>
+        <button class="glossary-remove" title="Remove" onclick="removeGlossary(${i})">×</button>
+      </div>`).join('');
+  }
+  function addGlossary() {
+    const abbrEl = document.getElementById('abbrIn');
+    const meanEl = document.getElementById('meanIn');
+    const abbr = abbrEl.value.trim();
+    const meaning = meanEl.value.trim();
+    if (!abbr || !meaning) { (abbr ? meanEl : abbrEl).focus(); return; }
+    const g = getGlossary().filter(e => e.abbr.toLowerCase() !== abbr.toLowerCase());
+    g.push({ abbr, meaning });
+    saveGlossary(g);
+    abbrEl.value = ''; meanEl.value = ''; abbrEl.focus();
+    renderGlossary();
+  }
+  function removeGlossary(i) {
+    const g = getGlossary();
+    g.splice(i, 1);
+    saveGlossary(g);
+    renderGlossary();
+  }
+
   async function handleUpload(file) {
     if (!file) return;
     document.getElementById('uploadBtn').classList.add('uploading');
@@ -298,6 +378,8 @@
     try {
       const fd = new FormData();
       fd.append('image', file);
+      const glossary = getGlossary();
+      if (glossary.length) fd.append('glossary', JSON.stringify(glossary));
       const res = await fetch('/api/parse', { method: 'POST', body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
@@ -321,6 +403,7 @@
     if (f && f.type.startsWith('image/')) handleUpload(f);
   });
 
+  renderGlossary();
   load();
 </script>
 </body>
