@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Co-Pilot — Goal Matching</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee;
+      --surface: #faf8f5;
+      --border: #e8e3dc;
+      --border-hover: #ccc6be;
+      --border-strong: #aaa49d;
+      --accent-light: #f0ede8;
+      --text: #1a1a1a;
+      --muted: #888077;
+      --hint: #b8b0a5;
+      --success: #2d7a4f;
+      --success-bg: #f3faf5;
+      --success-border: #bfe0cc;
+      --warn: #a06b1a;
+      --warn-bg: #fdf9f1;
+      --warn-border: #e4d3b8;
+      --danger: #c0392b;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .logo-mark { font-size: 18px; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .side-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .side-link:hover { background: var(--accent-light); color: var(--text); }
+    .side-link.active { background: var(--accent-light); color: var(--text); }
+
+    main.content { margin-left: 220px; flex: 1; min-width: 0; }
+    .page { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { position: sticky; width: auto; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; }
+      .sidebar-brand { padding: 0 14px 0 6px; }
+      .sidebar-nav { flex-direction: row; gap: 4px; }
+      .side-link span { display: none; }
+      .side-link { padding: 9px; }
+      main.content { margin-left: 0; }
+    }
+
+    .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
+    .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+    .demo-note { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 11px 13px; line-height: 1.5; margin-bottom: 32px; }
+
+    .step-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .step-num { width: 18px; height: 18px; border-radius: 99px; background: var(--text); color: var(--surface); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; letter-spacing: 0; }
+    .step { margin-bottom: 32px; }
+
+    .source-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+    .source-row { display: flex; gap: 12px; font-size: 13px; padding: 6px 0; }
+    .source-key { color: var(--hint); width: 110px; flex-shrink: 0; }
+    .source-val { color: var(--text); }
+
+    .match-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .extracted-chip { font-size: 13px; color: var(--muted); }
+    .arrow { color: var(--hint); }
+    select { font-family: var(--sans); font-size: 14px; font-weight: 500; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+    select:focus { outline: none; border-color: var(--border-strong); }
+    .confidence { font-size: 12px; padding: 3px 9px; border-radius: 99px; font-weight: 500; }
+    .conf-high { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+    .conf-low { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); }
+
+    .goal-option { display: flex; align-items: flex-start; gap: 11px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; margin-bottom: 8px; transition: border-color .15s, background .15s; }
+    .goal-option:hover { border-color: var(--border-hover); }
+    .goal-option.selected { border-color: var(--text); background: var(--accent-light); }
+    .goal-radio { width: 16px; height: 16px; border-radius: 99px; border: 1.5px solid var(--border-strong); flex-shrink: 0; margin-top: 2px; position: relative; }
+    .goal-option.selected .goal-radio { border-color: var(--text); }
+    .goal-option.selected .goal-radio::after { content: ''; position: absolute; inset: 3px; border-radius: 99px; background: var(--text); }
+    .goal-body { flex: 1; min-width: 0; }
+    .goal-text { font-size: 14px; line-height: 1.45; }
+    .goal-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .goal-conf { flex-shrink: 0; }
+
+    .map-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .map-goal { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .map-goal strong { color: var(--text); font-weight: 600; }
+    .map-field { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .map-field label { font-size: 13px; color: var(--muted); }
+    .map-field input { width: 80px; font-family: var(--sans); font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    .map-field input:focus { outline: none; border-color: var(--border-strong); }
+    .map-field .of { font-size: 13px; color: var(--muted); }
+    .progress-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 100%; background: var(--text); border-radius: 99px; transform-origin: left; transform: scaleX(0); transition: transform .25s cubic-bezier(0.22, 1, 0.36, 1); }
+    .progress-fill.met { background: var(--success); }
+    .progress-caption { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    .actions { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-primary { padding: 10px 20px; border-radius: 99px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #333; }
+    .btn-ghost { padding: 10px 20px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .btn-ghost:hover { border-color: var(--border-strong); color: var(--text); }
+
+    .logged { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 12px; padding: 16px 18px; line-height: 1.5; }
+    .logged svg { width: 18px; height: 18px; stroke: var(--success); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 1px; }
+
+    /* Floating upload button */
+    .fab-upload { position: fixed; top: 18px; right: 26px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--text); color: var(--surface); border: none; border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden; transition: background .15s; }
+    .fab-upload:hover { background: #333; }
+    .fab-upload svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .fab-upload.uploading { opacity: .6; pointer-events: none; }
+    .fab-status { position: fixed; top: 54px; right: 26px; z-index: 50; font-size: 12px; color: var(--muted); text-align: right; }
+    .fab-status.error { color: var(--danger); }
+    @media (max-width: 700px) {
+      .fab-upload { top: auto; bottom: 20px; right: 20px; }
+      .fab-status { top: auto; bottom: 58px; right: 20px; }
+    }
+  </style>
+</head>
+<body>
+<button class="fab-upload" id="uploadBtn">
+  <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
+  Upload
+  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+</button>
+<span class="fab-status" id="uploadStatus"></span>
+
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
+  <nav class="sidebar-nav">
+    <a class="side-link" href="/">
+      <svg viewBox="0 0 20 20"><path d="M3 8.5L10 3l7 5.5"/><path d="M5 7.5V16h10V7.5"/><path d="M8.5 16v-4h3v4"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="side-link" href="/queue.html">
+      <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
+      <span>Review queue</span>
+    </a>
+    <a class="side-link active" href="/match.html">
+      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
+      <span>Goal matching</span>
+    </a>
+  </nav>
+</aside>
+
+<main class="content">
+<div class="page">
+  <div class="page-title">Goal matching</div>
+  <div class="page-subtitle">Match an extracted record to a student and their active goal, then log the progress.</div>
+
+  <div class="demo-note">
+    <span>⚑</span>
+    <span>Demo. This runs on sample students and goals until your IEP data source (Supabase or Databricks) is connected. The matching here mirrors the real flow but the roster is mock.</span>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="step-num">1</span>Extracted from the document</div>
+    <div class="source-card" id="sourceCard"></div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="step-num">2</span>Match to a student</div>
+    <div class="match-line">
+      <span class="extracted-chip" id="extractedName"></span>
+      <span class="arrow">→</span>
+      <select id="studentSelect" onchange="onStudentChange()"></select>
+      <span class="confidence conf-high" id="studentConf"></span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="step-num">3</span>Match to a goal</div>
+    <div id="goalList"></div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="step-num">4</span>Confirm progress</div>
+    <div class="map-card" id="mapCard"></div>
+  </div>
+
+  <div id="result"></div>
+</div>
+</main>
+
+<script>
+  // --- Mock roster (stands in for the connected IEP data source) ---
+  const ROSTER = [
+    { id: 'amara', name: 'Amara Osei', year: 'Year 4', goals: [
+      { id: 'a1', text: 'Read 100 high-frequency sight words independently', target: 100, unit: 'sight words' },
+      { id: 'a2', text: 'Sustain attention during carpet time for 10 minutes', target: 10, unit: 'minutes' },
+      { id: 'a3', text: 'Solve two-digit addition with 80% accuracy', target: 80, unit: '%' },
+      { id: 'a4', text: 'Use three-word phrases to request items', target: 3, unit: 'words' }
+    ]},
+    { id: 'tyler', name: 'Tyler Kemp', year: 'Year 4', goals: [
+      { id: 't1', text: 'Reduce adult prompts during transitions to 4 or fewer', target: 4, unit: 'prompts' },
+      { id: 't2', text: 'Complete morning routine independently 4 of 5 days', target: 5, unit: 'days' },
+      { id: 't3', text: 'Read number bonds to 20 with 90% accuracy', target: 90, unit: '%' }
+    ]},
+    { id: 'priya', name: 'Priya Shah', year: 'Year 4', goals: [
+      { id: 'p1', text: 'Write a simple sentence with capital and full stop', target: 10, unit: 'sentences' },
+      { id: 'p2', text: 'Recall multiplication facts to 5x with 80% accuracy', target: 80, unit: '%' }
+    ]}
+  ];
+
+  // --- Mock extracted record (as if it came from a capture) ---
+  const EXTRACTED = {
+    studentText: 'Amara O',
+    goalProgressText: '67 of 100 sight words read independently',
+    score: '67/100',
+    date: '2026-06-18',
+    note: 'Strong focus in the morning session'
+  };
+
+  const STOP = new Set(['the','a','an','to','of','with','and','for','in','on','at','independently','during','or','fewer','than','read','use']);
+  function tokens(s) { return (s || '').toLowerCase().replace(/[^a-z0-9%\s]/g, ' ').split(/\s+/).filter(w => w && !STOP.has(w)); }
+
+  // Fuzzy student match: shared name tokens / initials
+  function rankStudents(text) {
+    const t = tokens(text);
+    return ROSTER.map(s => {
+      const st = tokens(s.name);
+      let shared = t.filter(w => st.some(n => n.startsWith(w) || w.startsWith(n))).length;
+      const conf = Math.min(96, 50 + shared * 30);
+      return { student: s, conf };
+    }).sort((a, b) => b.conf - a.conf);
+  }
+
+  // Goal ranking by keyword overlap with the extracted progress text
+  function rankGoals(student, progressText) {
+    const pt = tokens(progressText);
+    return student.goals.map(g => {
+      const gt = tokens(g.text + ' ' + g.unit);
+      const shared = pt.filter(w => gt.includes(w)).length;
+      const conf = Math.min(97, 35 + shared * 22);
+      return { goal: g, conf };
+    }).sort((a, b) => b.conf - a.conf);
+  }
+
+  function parseCurrent(text) {
+    const frac = text.match(/(\d+)\s*(?:\/|of)\s*(\d+)/i);
+    if (frac) return { current: +frac[1], target: +frac[2] };
+    const pct = text.match(/(\d+)\s*%/);
+    if (pct) return { current: +pct[1] };
+    const n = text.match(/\d+/);
+    return n ? { current: +n[0] } : { current: 0 };
+  }
+
+  let selectedStudent = null;
+  let selectedGoalId = null;
+
+  function confClass(c) { return c >= 75 ? 'conf-high' : 'conf-low'; }
+  function confText(c) { return `${c}% ${c >= 75 ? 'match' : 'low — check'}`; }
+
+  function renderSource() {
+    const rows = [
+      ['Student', EXTRACTED.studentText],
+      ['Progress', EXTRACTED.goalProgressText],
+      ['Raw score', EXTRACTED.score],
+      ['Date', EXTRACTED.date],
+      ['Note', EXTRACTED.note]
+    ];
+    document.getElementById('sourceCard').innerHTML = rows
+      .map(([k, v]) => `<div class="source-row"><span class="source-key">${k}</span><span class="source-val">${v}</span></div>`).join('');
+  }
+
+  function renderStudents() {
+    const ranked = rankStudents(EXTRACTED.studentText);
+    const best = ranked[0];
+    selectedStudent = best.student;
+    document.getElementById('extractedName').textContent = `"${EXTRACTED.studentText}"`;
+    const sel = document.getElementById('studentSelect');
+    sel.innerHTML = ROSTER.map(s => `<option value="${s.id}" ${s.id === best.student.id ? 'selected' : ''}>${s.name} · ${s.year}</option>`).join('');
+    const conf = document.getElementById('studentConf');
+    conf.className = 'confidence ' + confClass(best.conf);
+    conf.textContent = confText(best.conf);
+  }
+
+  function onStudentChange() {
+    const id = document.getElementById('studentSelect').value;
+    selectedStudent = ROSTER.find(s => s.id === id);
+    const conf = document.getElementById('studentConf');
+    conf.className = 'confidence conf-high';
+    conf.textContent = 'confirmed by you';
+    renderGoals();
+  }
+
+  function renderGoals() {
+    const ranked = rankGoals(selectedStudent, EXTRACTED.goalProgressText);
+    selectedGoalId = ranked[0].goal.id;
+    document.getElementById('goalList').innerHTML = ranked.map(({ goal, conf }) => `
+      <div class="goal-option ${goal.id === selectedGoalId ? 'selected' : ''}" id="goal-${goal.id}" onclick="selectGoal('${goal.id}')">
+        <div class="goal-radio"></div>
+        <div class="goal-body">
+          <div class="goal-text">${goal.text}</div>
+          <div class="goal-meta">Target: ${goal.target} ${goal.unit}</div>
+        </div>
+        <span class="confidence ${confClass(conf)} goal-conf">${confText(conf)}</span>
+      </div>`).join('');
+    renderMap();
+  }
+
+  function selectGoal(id) {
+    selectedGoalId = id;
+    document.querySelectorAll('.goal-option').forEach(el => el.classList.toggle('selected', el.id === `goal-${id}`));
+    renderMap();
+  }
+
+  function currentGoal() { return selectedStudent.goals.find(g => g.id === selectedGoalId); }
+
+  function renderMap() {
+    const goal = currentGoal();
+    const parsed = parseCurrent(EXTRACTED.goalProgressText + ' ' + EXTRACTED.score);
+    const current = parsed.current;
+    const target = goal.target;
+    document.getElementById('mapCard').innerHTML = `
+      <div class="map-goal">Logging against <strong>${goal.text}</strong></div>
+      <div class="map-field">
+        <label>Current</label>
+        <input type="number" id="currentInput" value="${current}" oninput="updateBar()">
+        <span class="of">of ${target} ${goal.unit}</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-caption" id="progressCaption"></div>
+      <div class="actions">
+        <button class="btn-primary" onclick="logProgress()">Confirm &amp; log</button>
+        <button class="btn-ghost" onclick="window.location='/queue.html'">Back to queue</button>
+      </div>`;
+    updateBar();
+  }
+
+  function updateBar() {
+    const goal = currentGoal();
+    const current = +document.getElementById('currentInput').value || 0;
+    const pct = Math.max(0, Math.min(100, Math.round((current / goal.target) * 100)));
+    const fill = document.getElementById('progressFill');
+    fill.style.transform = `scaleX(${pct / 100})`;
+    fill.classList.toggle('met', current >= goal.target);
+    document.getElementById('progressCaption').textContent =
+      current >= goal.target ? `Target met (${pct}%)` : `${pct}% of target`;
+  }
+
+  function logProgress() {
+    const goal = currentGoal();
+    const current = +document.getElementById('currentInput').value || 0;
+    document.getElementById('result').innerHTML = `
+      <div class="logged">
+        <svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-9"/></svg>
+        <span>Logged <strong>${current} of ${goal.target} ${goal.unit}</strong> against ${selectedStudent.name}'s goal “${goal.text}”. In the live app this would write to the student's IEP record and appear in their progress history.</span>
+      </div>`;
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    const btn = document.getElementById('uploadBtn');
+    const status = document.getElementById('uploadStatus');
+    btn.classList.add('uploading');
+    status.className = 'fab-status';
+    status.textContent = 'Uploading…';
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/parse', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      window.location = '/queue.html';
+    } catch(e) {
+      status.className = 'fab-status error';
+      status.textContent = e.message;
+      btn.classList.remove('uploading');
+    }
+  }
+
+  renderSource();
+  renderStudents();
+  renderGoals();
+</script>
+</body>
+</html>
