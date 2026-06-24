@@ -124,12 +124,15 @@
     .fab-upload svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .fab-upload input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
     .fab-upload.uploading { opacity: .6; pointer-events: none; }
-    .fab-status { position: fixed; top: 54px; right: 26px; z-index: 50; font-size: 12px; color: var(--muted); text-align: right; }
-    .fab-status.error { color: var(--danger); }
-    @media (max-width: 700px) {
-      .fab-upload { top: auto; bottom: 20px; right: 20px; }
-      .fab-status { top: auto; bottom: 58px; right: 20px; }
-    }
+    @media (max-width: 700px) { .fab-upload { top: auto; bottom: 20px; right: 20px; } }
+    /* Upload toast */
+    .upload-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(16px); z-index: 200; display: flex; align-items: center; gap: 10px; padding: 12px 22px; background: var(--text); color: var(--surface); border-radius: 99px; font-family: var(--sans); font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .22s, transform .22s cubic-bezier(0.22,1,0.36,1); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+    .upload-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .upload-toast.is-error { background: #c0392b; }
+    .upload-toast.is-success { background: var(--success); }
+    .toast-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+    .upload-toast.is-error .toast-spinner, .upload-toast.is-success .toast-spinner { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -371,24 +374,41 @@
     document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  function showToast(msg, type) {
+    let t = document.getElementById('uploadToast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'uploadToast';
+      t.innerHTML = '<div class="toast-spinner"></div><span id="toastMsg"></span>';
+      document.body.appendChild(t);
+    }
+    t.className = 'upload-toast' + (type ? ' is-' + type : '');
+    document.getElementById('toastMsg').textContent = msg;
+    requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('visible')));
+  }
+  function hideToast(delay) {
+    setTimeout(() => {
+      const t = document.getElementById('uploadToast');
+      if (t) t.classList.remove('visible');
+    }, delay || 0);
+  }
+
   async function handleUpload(file) {
     if (!file) return;
-    const btn = document.getElementById('uploadBtn');
-    const status = document.getElementById('uploadStatus');
-    btn.classList.add('uploading');
-    status.className = 'fab-status';
-    status.textContent = 'Uploading…';
+    document.getElementById('uploadBtn').classList.add('uploading');
+    showToast('Uploading document…');
     try {
       const fd = new FormData();
       fd.append('image', file);
       const res = await fetch('/api/parse', { method: 'POST', body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      window.location = '/queue.html';
+      showToast('Added to review queue ✓', 'success');
+      setTimeout(() => window.location = '/queue.html', 1000);
     } catch(e) {
-      status.className = 'fab-status error';
-      status.textContent = e.message;
-      btn.classList.remove('uploading');
+      showToast(e.message, 'error');
+      hideToast(4000);
+      document.getElementById('uploadBtn').classList.remove('uploading');
     }
   }
 
