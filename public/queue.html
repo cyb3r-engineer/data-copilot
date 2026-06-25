@@ -203,7 +203,7 @@
 <button class="fab-upload" id="uploadBtn">
   <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
   Upload
-  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+  <input type="file" accept="image/*" multiple onchange="handleUpload(this.files)">
 </button>
 <span class="fab-status" id="uploadStatus"></span>
 
@@ -225,6 +225,10 @@
     <a class="side-link" href="/match.html">
       <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
       <span>Goal matching</span>
+    </a>
+    <a class="side-link" href="/overview.html">
+      <svg viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+      <span>Class overview</span>
     </a>
   </nav>
 </aside>
@@ -547,27 +551,30 @@
     });
   }
 
-  async function handleUpload(file) {
-    if (!file) return;
-    document.getElementById('uploadBtn').classList.add('uploading');
-    showToast('Uploading document…');
+  async function uploadOne(file, index, total) {
+    showToast(total > 1 ? `Uploading ${index + 1} of ${total}…` : 'Uploading document…');
     const thumb = await createThumbnail(file);
-    try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('/api/parse', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
-      if (thumb && data.id) {
-        try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {}
-      }
-      showToast('Added to review queue ✓', 'success');
-      await loadQueue();
-      hideToast(2500);
-    } catch(e) {
-      showToast(e.message, 'error');
-      hideToast(4000);
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch('/api/parse', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    if (thumb && data.id) { try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {} }
+    return data;
+  }
+
+  async function handleUpload(files) {
+    const list = files instanceof FileList ? [...files].filter(f => f.type.startsWith('image/')) : (files ? [files] : []);
+    if (!list.length) return;
+    document.getElementById('uploadBtn').classList.add('uploading');
+    let errors = 0;
+    for (let i = 0; i < list.length; i++) {
+      try { await uploadOne(list[i], i, list.length); }
+      catch(e) { errors++; showToast(`File ${i + 1}: ${e.message}`, 'error'); await new Promise(r => setTimeout(r, 2000)); }
     }
+    await loadQueue();
+    if (errors === 0) { showToast(list.length > 1 ? `${list.length} documents added ✓` : 'Added to review queue ✓', 'success'); hideToast(2500); }
+    else { showToast(`${list.length - errors} uploaded, ${errors} failed`, 'error'); hideToast(4000); }
     document.getElementById('uploadBtn').classList.remove('uploading');
   }
 

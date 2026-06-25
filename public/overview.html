@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Co-Pilot — Class Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee; --surface: #faf8f5; --border: #e8e3dc; --border-hover: #ccc6be;
+      --border-strong: #aaa49d; --accent-light: #f0ede8; --text: #1a1a1a;
+      --muted: #888077; --hint: #b8b0a5;
+      --success: #2d7a4f; --success-bg: #f3faf5; --success-border: #bfe0cc;
+      --warn: #a06b1a; --warn-bg: #fdf9f1; --warn-border: #e4d3b8;
+      --danger: #c0392b; --danger-bg: #fdf3f2; --danger-border: #f0c5c0;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .logo-mark { font-size: 18px; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, color .15s; }
+    .side-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .side-link:hover { background: var(--accent-light); color: var(--text); }
+    .side-link.active { background: var(--accent-light); color: var(--text); }
+
+    main.content { margin-left: 220px; flex: 1; min-width: 0; }
+    .page { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { position: sticky; width: auto; flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 14px; }
+      .sidebar-brand { padding: 0 14px 0 6px; }
+      .sidebar-nav { flex-direction: row; gap: 4px; }
+      .side-link span { display: none; }
+      .side-link { padding: 9px; }
+      main.content { margin-left: 0; }
+    }
+
+    .page-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
+    .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+    /* Filters */
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; align-items: center; }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); padding: 0 4px; display: flex; align-items: center; }
+    .filter-btn { padding: 6px 13px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-btn.active { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .filter-sep { width: 1px; background: var(--border); margin: 0 4px; align-self: stretch; }
+
+    /* Legend */
+    .legend { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .rag-green { background: var(--success); }
+    .rag-amber { background: var(--warn); }
+    .rag-red { background: var(--danger); }
+    .rag-none { background: var(--hint); }
+
+    /* Summary strip */
+    .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 32px; }
+    .summary-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .summary-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); margin-bottom: 6px; }
+    .summary-value { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+    .sv-green { color: var(--success); }
+    .sv-amber { color: var(--warn); }
+    .sv-red { color: var(--danger); }
+
+    /* Student cards grid */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .student-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; text-decoration: none; color: inherit; display: block; transition: border-color .15s, box-shadow .15s; }
+    .student-card:hover { border-color: var(--border-hover); }
+    .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+    .card-name { font-size: 14px; font-weight: 500; }
+    .card-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .goals-list { display: flex; flex-direction: column; gap: 7px; }
+    .goal-row { display: flex; align-items: center; gap: 9px; }
+    .rag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .goal-row-text { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .goal-row-val { font-size: 11px; font-weight: 500; flex-shrink: 0; }
+    .val-green { color: var(--success); }
+    .val-amber { color: var(--warn); }
+    .val-red { color: var(--danger); }
+    .no-goals { font-size: 12px; color: var(--hint); font-style: italic; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--hint); font-size: 14px; grid-column: 1/-1; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand"><span class="logo-mark">✦</span><span>Data Co-Pilot</span></div>
+  <nav class="sidebar-nav">
+    <a class="side-link" href="/">
+      <svg viewBox="0 0 20 20"><path d="M3 8.5L10 3l7 5.5"/><path d="M5 7.5V16h10V7.5"/><path d="M8.5 16v-4h3v4"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="side-link" href="/queue.html">
+      <svg viewBox="0 0 20 20"><path d="M3 11l2.2-6.2a1 1 0 0 1 .94-.66h7.72a1 1 0 0 1 .94.66L17 11v4.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 11h3.5l1 1.8h5l1-1.8H17"/></svg>
+      <span>Review queue</span>
+    </a>
+    <a class="side-link" href="/students.html">
+      <svg viewBox="0 0 20 20"><circle cx="7" cy="7" r="3"/><path d="M2 17c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M13 4.5a3 3 0 0 1 0 5.4M14 12.2c2 .5 3.5 2.2 3.5 4.3"/></svg>
+      <span>Students</span>
+    </a>
+    <a class="side-link" href="/match.html">
+      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
+      <span>Goal matching</span>
+    </a>
+    <a class="side-link active" href="/overview.html">
+      <svg viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+      <span>Class overview</span>
+    </a>
+  </nav>
+</aside>
+
+<main class="content">
+<div class="page">
+  <div class="page-title">Class overview</div>
+  <div class="page-subtitle">RAG status across all students and active goals. Click a student to view detail.</div>
+
+  <div class="filter-row" id="filterRow">
+    <div class="filter-group">
+      <span class="filter-label">Year</span>
+      <div id="yearFilters"></div>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <span class="filter-label">Key worker</span>
+      <div id="workerFilters"></div>
+    </div>
+  </div>
+
+  <div class="summary-strip" id="summaryStrip"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot rag-green"></div>On track (≥80% of target)</div>
+    <div class="legend-item"><div class="legend-dot rag-amber"></div>Needs attention (60–79%)</div>
+    <div class="legend-item"><div class="legend-dot rag-red"></div>Below target (&lt;60%)</div>
+    <div class="legend-item"><div class="legend-dot rag-none"></div>No data</div>
+  </div>
+
+  <div class="cards-grid" id="cardsGrid"></div>
+</div>
+</main>
+
+<script src="/roster.js"></script>
+<script>
+  let filterYear = 'all', filterWorker = 'all';
+
+  function rag(g) {
+    if (!g.history || !g.history.length) return 'none';
+    const lowerBetter = /prompt/i.test(g.unit);
+    const pct = lowerBetter
+      ? g.target / Math.max(g.current, 0.01)  // invert: fewer prompts = better
+      : g.current / g.target;
+    if (pct >= 0.8) return 'green';
+    if (pct >= 0.6) return 'amber';
+    return 'red';
+  }
+
+  function ragDotClass(r) {
+    return { green: 'rag-green', amber: 'rag-amber', red: 'rag-red', none: 'rag-none' }[r] || 'rag-none';
+  }
+  function ragValClass(r) {
+    return { green: 'val-green', amber: 'val-amber', red: 'val-red', none: '' }[r] || '';
+  }
+
+  function ini(name) {
+    return (name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function uniqueSorted(key) {
+    return [...new Set((window.ROSTER || []).map(s => s[key]).filter(Boolean))].sort();
+  }
+
+  function renderFilters() {
+    const years = ['all', ...uniqueSorted('year')];
+    const workers = ['all', ...uniqueSorted('key_worker')];
+
+    document.getElementById('yearFilters').innerHTML = years.map(y =>
+      `<button class="filter-btn ${filterYear === y ? 'active' : ''}" onclick="setYear('${y}')">${y === 'all' ? 'All' : y}</button>`
+    ).join('');
+
+    document.getElementById('workerFilters').innerHTML = workers.map(w =>
+      `<button class="filter-btn ${filterWorker === w ? 'active' : ''}" onclick="setWorker('${encodeURIComponent(w)}')">${w === 'all' ? 'All' : w}</button>`
+    ).join('');
+  }
+
+  function setYear(y) { filterYear = y; render(); }
+  function setWorker(w) { filterWorker = decodeURIComponent(w); render(); }
+
+  function visible() {
+    return (window.ROSTER || []).filter(s => {
+      if (filterYear !== 'all' && s.year !== filterYear) return false;
+      if (filterWorker !== 'all' && s.key_worker !== filterWorker) return false;
+      return true;
+    });
+  }
+
+  function render() {
+    renderFilters();
+    const students = visible();
+
+    // Summary counts
+    let green = 0, amber = 0, red = 0, none = 0;
+    students.forEach(s => (s.goals || []).forEach(g => {
+      const r = rag(g);
+      if (r === 'green') green++;
+      else if (r === 'amber') amber++;
+      else if (r === 'red') red++;
+      else none++;
+    }));
+    document.getElementById('summaryStrip').innerHTML = `
+      <div class="summary-cell"><div class="summary-label">Students</div><div class="summary-value">${students.length}</div></div>
+      <div class="summary-cell"><div class="summary-label">On track</div><div class="summary-value sv-green">${green}</div></div>
+      <div class="summary-cell"><div class="summary-label">Needs attention</div><div class="summary-value sv-amber">${amber}</div></div>
+      <div class="summary-cell"><div class="summary-label">Below target</div><div class="summary-value sv-red">${red}</div></div>`;
+
+    if (!students.length) {
+      document.getElementById('cardsGrid').innerHTML = `<div class="empty-state">No students match the current filters.</div>`;
+      return;
+    }
+
+    // Sort: most red/amber first
+    const score = s => {
+      let v = 0;
+      (s.goals || []).forEach(g => { const r = rag(g); if (r === 'red') v += 2; else if (r === 'amber') v += 1; });
+      return v;
+    };
+    const sorted = [...students].sort((a, b) => score(b) - score(a));
+
+    document.getElementById('cardsGrid').innerHTML = sorted.map(s => {
+      const goalRows = (s.goals || []).map(g => {
+        const r = rag(g);
+        const lowerBetter = /prompt/i.test(g.unit);
+        const pct = lowerBetter
+          ? Math.round((g.target / Math.max(g.current, 0.01)) * 100)
+          : Math.round((g.current / g.target) * 100);
+        const valLabel = r === 'none' ? 'No data' : `${Math.min(pct, 100)}%`;
+        return `
+          <div class="goal-row">
+            <div class="rag-dot ${ragDotClass(r)}"></div>
+            <span class="goal-row-text" title="${g.text}">${g.text}</span>
+            <span class="goal-row-val ${ragValClass(r)}">${valLabel}</span>
+          </div>`;
+      }).join('');
+
+      return `
+        <a class="student-card" href="/students.html#${s.id}">
+          <div class="card-head">
+            <div class="avatar">${ini(s.name)}</div>
+            <div>
+              <div class="card-name">${s.name}</div>
+              <div class="card-meta">${s.year} · ${s.key_worker}</div>
+            </div>
+          </div>
+          <div class="goals-list">
+            ${goalRows || '<div class="no-goals">No goals recorded</div>'}
+          </div>
+        </a>`;
+    }).join('');
+  }
+
+  render();
+</script>
+</body>
+</html>

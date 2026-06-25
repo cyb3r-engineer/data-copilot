@@ -86,6 +86,17 @@
     .section-link { font-size: 12px; color: var(--muted); text-decoration: none; }
     .section-link:hover { color: var(--text); }
 
+    /* Stale goal alerts */
+    .stale-section { margin-bottom: 36px; }
+    .stale-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .stale-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--warn-border); border-radius: 10px; }
+    .stale-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--warn-bg); border: 1px solid var(--warn-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+    .stale-body { flex: 1; min-width: 0; }
+    .stale-name { font-size: 13px; font-weight: 500; }
+    .stale-goal { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stale-age { font-size: 11px; color: var(--warn); font-weight: 500; flex-shrink: 0; }
+    .stale-empty { font-size: 13px; color: var(--success); display: flex; align-items: center; gap: 8px; padding: 10px 0; }
+
     /* Type breakdown */
     .type-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .type-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; font-size: 13px; }
@@ -164,7 +175,7 @@
 <button class="fab-upload" id="uploadBtn">
   <svg viewBox="0 0 16 16"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M3 13h10"/></svg>
   Upload
-  <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+  <input type="file" accept="image/*" multiple onchange="handleUpload(this.files)">
 </button>
 <span class="fab-status" id="uploadStatus"></span>
 
@@ -187,6 +198,10 @@
       <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
       <span>Goal matching</span>
     </a>
+    <a class="side-link" href="/overview.html">
+      <svg viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+      <span>Class overview</span>
+    </a>
   </nav>
 </aside>
 
@@ -196,7 +211,7 @@
   <div class="greeting-sub">Capture a document, or pick up where you left off.</div>
 
   <div class="capture-zone" id="captureZone">
-    <input type="file" accept="image/*" onchange="handleUpload(this.files[0])">
+    <input type="file" accept="image/*" multiple onchange="handleUpload(this.files)">
     <svg class="cz-icon" viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="18" rx="2"/><path d="M4 13h24M11 8V6a1 1 0 011-1h9a1 1 0 011 1v2"/><circle cx="16" cy="20" r="4"/></svg>
     <div class="cz-title">Capture a document</div>
     <div class="cz-sub">Snap or drop a photo of an assessment sheet, IEP progress, behaviour note or observation. We'll pull out the data for you to review.</div>
@@ -226,6 +241,14 @@
     <div class="stat-cell"><div class="stat-label">Needs review</div><div class="stat-value warn" id="statReview">—</div></div>
     <div class="stat-cell"><div class="stat-label">Ready</div><div class="stat-value" id="statReady">—</div></div>
     <div class="stat-cell"><div class="stat-label">Approved</div><div class="stat-value success" id="statApproved">—</div></div>
+  </div>
+
+  <div class="section stale-section" id="staleSection">
+    <div class="section-header">
+      <span class="section-label">Goals with no recent data</span>
+      <a class="section-link" href="/students.html">View students →</a>
+    </div>
+    <div id="staleList"></div>
   </div>
 
   <div class="section" id="attentionSection">
@@ -424,30 +447,36 @@
     });
   }
 
-  async function handleUpload(file) {
-    if (!file) return;
+  async function uploadOne(file, index, total) {
+    const label = total > 1 ? `Uploading ${index + 1} of ${total}…` : 'Uploading document…';
+    showToast(label);
+    const thumb = await createThumbnail(file);
+    const fd = new FormData();
+    fd.append('image', file);
+    const glossary = getGlossary();
+    if (glossary.length) fd.append('glossary', JSON.stringify(glossary));
+    const res = await fetch('/api/parse', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    if (thumb && data.id) {
+      try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {}
+    }
+    return data;
+  }
+
+  async function handleUpload(files) {
+    const list = files instanceof FileList ? [...files].filter(f => f.type.startsWith('image/')) : (files ? [files] : []);
+    if (!list.length) return;
     document.getElementById('uploadBtn').classList.add('uploading');
     document.getElementById('captureZone').classList.add('busy');
-    showToast('Uploading document…');
-    const thumb = await createThumbnail(file);
-    try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const glossary = getGlossary();
-      if (glossary.length) fd.append('glossary', JSON.stringify(glossary));
-      const res = await fetch('/api/parse', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
-      if (thumb && data.id) {
-        try { localStorage.setItem(`dc_img_${data.id}`, thumb); } catch(e) {}
-      }
-      showToast('Added to review queue ✓', 'success');
-      await load();
-      hideToast(2500);
-    } catch(e) {
-      showToast(e.message, 'error');
-      hideToast(4000);
+    let errors = 0;
+    for (let i = 0; i < list.length; i++) {
+      try { await uploadOne(list[i], i, list.length); }
+      catch(e) { errors++; showToast(`File ${i + 1}: ${e.message}`, 'error'); await new Promise(r => setTimeout(r, 2000)); }
     }
+    await load();
+    if (errors === 0) { showToast(list.length > 1 ? `${list.length} documents added ✓` : 'Added to review queue ✓', 'success'); hideToast(2500); }
+    else { showToast(`${list.length - errors} uploaded, ${errors} failed`, 'error'); hideToast(4000); }
     document.getElementById('uploadBtn').classList.remove('uploading');
     document.getElementById('captureZone').classList.remove('busy');
   }
@@ -458,12 +487,57 @@
   zone.addEventListener('drop', e => {
     e.preventDefault();
     zone.classList.remove('drag');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) handleUpload(f);
+    const imgs = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+    if (imgs.length) handleUpload(imgs);
   });
 
   renderGlossary();
   load();
+
+  // ── Stale goal alerts ─────────────────────────────────────────────────────
+  function renderStaleGoals() {
+    if (!window.ROSTER) return;
+    const TODAY = new Date('2026-06-25');
+    const THRESHOLD_DAYS = 14;
+    const stale = [];
+    window.ROSTER.forEach(student => {
+      (student.goals || []).forEach(goal => {
+        const hist = goal.history || [];
+        let daysSince = null;
+        if (!hist.length) {
+          daysSince = Infinity;
+        } else {
+          const last = new Date(hist[hist.length - 1].date);
+          daysSince = Math.floor((TODAY - last) / 86400000);
+        }
+        if (daysSince === null || daysSince < THRESHOLD_DAYS) return;
+        stale.push({ student, goal, daysSince });
+      });
+    });
+    // Sort by most overdue first, cap at 6
+    stale.sort((a, b) => b.daysSince - a.daysSince);
+    const shown = stale.slice(0, 6);
+    const el = document.getElementById('staleList');
+    if (!el) return;
+    if (!shown.length) {
+      el.innerHTML = `<div class="stale-empty"><span>✓</span> All goals have data recorded in the last ${THRESHOLD_DAYS} days.</div>`;
+      return;
+    }
+    const ini = name => (name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    el.innerHTML = `<div class="stale-list">${shown.map(({ student, goal, daysSince }) => `
+      <a class="stale-row" href="/students.html#${student.id}" style="text-decoration:none;color:inherit">
+        <div class="stale-icon">${ini(student.name)}</div>
+        <div class="stale-body">
+          <div class="stale-name">${student.name}</div>
+          <div class="stale-goal">${goal.text}</div>
+        </div>
+        <div class="stale-age">${daysSince === Infinity ? 'No data' : daysSince + 'd ago'}</div>
+      </a>`).join('')}
+      ${stale.length > 6 ? `<div style="font-size:12px;color:var(--muted);padding:6px 2px">+${stale.length - 6} more — <a href="/students.html" style="color:var(--text)">view all students</a></div>` : ''}
+    </div>`;
+  }
 </script>
+<script src="/roster.js"></script>
+<script>renderStaleGoals();</script>
 </body>
 </html>

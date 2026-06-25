@@ -124,6 +124,25 @@
     .history { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
     .history-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 3px 0; }
     .history-row .hv { color: var(--text); }
+    .goal-chart { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .chart-legend { display: flex; gap: 14px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+    .chart-legend span { display: flex; align-items: center; gap: 5px; }
+
+    /* Print summary */
+    .print-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .print-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .print-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .detail-actions { display: flex; gap: 8px; margin-top: 20px; margin-bottom: 8px; }
+
+    @media print {
+      .sidebar, .fab-upload, .fab-status, .back-btn, .detail-actions, #relatedDocs, .section-label + #relatedDocs, [style*="margin-top:32px"] { display: none !important; }
+      body { background: #fff; }
+      main.content { margin-left: 0 !important; }
+      .page { padding: 24px !important; }
+      .goal-card { break-inside: avoid; border: 1px solid #ccc; }
+      .detail-head { margin-bottom: 16px; }
+      @page { margin: 16mm; }
+    }
 
     /* Related documents */
     .doc-list { display: flex; flex-direction: column; }
@@ -182,6 +201,10 @@
     <a class="side-link" href="/match.html">
       <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19"/></svg>
       <span>Goal matching</span>
+    </a>
+    <a class="side-link" href="/overview.html">
+      <svg viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+      <span>Class overview</span>
     </a>
   </nav>
 </aside>
@@ -347,12 +370,46 @@
     location.hash = id;
   }
 
+  function chartSvg(g) {
+    const hist = (g.history || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    if (hist.length < 2) return '';
+    const W = 300, H = 72, PL = 6, PR = 6, PT = 6, PB = 18;
+    const iW = W - PL - PR, iH = H - PT - PB;
+    const lowerBetter = /prompt/i.test(g.unit);
+    const vals = hist.map(h => h.value).concat([g.target]);
+    const minV = Math.min(...vals) * 0.85, maxV = Math.max(...vals) * 1.12;
+    const px = i => PL + (i / (hist.length - 1)) * iW;
+    const py = v => PT + (1 - (v - minV) / (maxV - minV)) * iH;
+    const met = lowerBetter ? g.current <= g.target : g.current >= g.target;
+    const lineCol = met ? '#2d7a4f' : '#1a1a1a';
+    const targetCol = met ? '#2d7a4f' : '#a06b1a';
+    const pts = hist.map((h, i) => `${px(i).toFixed(1)},${py(h.value).toFixed(1)}`).join(' ');
+    const tY = py(g.target).toFixed(1);
+    const dots = hist.map((h, i) => {
+      const last = i === hist.length - 1;
+      return `<circle cx="${px(i).toFixed(1)}" cy="${py(h.value).toFixed(1)}" r="${last ? 4 : 2.5}" fill="${last ? lineCol : lineCol}" opacity="${last ? 1 : 0.45}"/>`;
+    }).join('');
+    const d0 = hist[0].date.slice(5).replace('-', '/');
+    const dN = hist[hist.length - 1].date.slice(5).replace('-', '/');
+    return `<div class="goal-chart">
+      <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">
+        <line x1="${PL}" y1="${tY}" x2="${W - PR}" y2="${tY}" stroke="${targetCol}" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.6"/>
+        <polyline points="${pts}" fill="none" stroke="${lineCol}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.75"/>
+        ${dots}
+        <text x="${PL}" y="${H}" font-size="9" fill="#b8b0a5" font-family="Inter,system-ui,sans-serif">${d0}</text>
+        <text x="${W - PR}" y="${H}" font-size="9" fill="#b8b0a5" font-family="Inter,system-ui,sans-serif" text-anchor="end">${dN}</text>
+      </svg>
+      <div class="chart-legend">
+        <span><svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="${targetCol}" stroke-width="1.5" stroke-dasharray="4 2"/></svg> Target</span>
+        <span><svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="${lineCol}" stroke-width="2"/></svg> Progress</span>
+      </div>
+    </div>`;
+  }
+
   function renderDetail(s) {
     const goals = s.goals.map(g => {
       const st = goalStatus(g);
       const pct = Math.max(0, Math.min(100, Math.round((g.current / g.target) * 100)));
-      const history = (g.history || []).slice().reverse().map(h =>
-        `<div class="history-row"><span>${h.date}</span><span class="hv">${h.value} ${g.unit}</span></div>`).join('');
       return `
         <div class="goal-card">
           <div class="goal-top">
@@ -361,7 +418,7 @@
           </div>
           <div class="progress-track"><div class="progress-fill ${st.key === 'met' ? 'met' : ''}" style="transform:scaleX(${pct / 100})"></div></div>
           <div class="goal-numbers"><span>Current: <strong>${g.current} ${g.unit}</strong></span><span>Target: ${g.target} ${g.unit}</span></div>
-          ${history ? `<div class="history">${history}</div>` : ''}
+          ${chartSvg(g)}
         </div>`;
     }).join('');
     document.getElementById('page').innerHTML = `
@@ -372,6 +429,12 @@
           <div class="detail-name">${s.name}</div>
           <div class="detail-meta">${s.year} · Key worker: ${s.key_worker}</div>
         </div>
+      </div>
+      <div class="detail-actions">
+        <button class="print-btn" onclick="window.print()">
+          <svg viewBox="0 0 16 16"><path d="M4 6V2h8v4M4 11H2V6h12v5h-2M4 9h8v5H4z"/></svg>
+          Print summary
+        </button>
       </div>
       <div class="section-label">Active goals (${s.goals.length})</div>
       ${goals}
