@@ -182,7 +182,19 @@
     .dv-no-image { text-align: center; color: var(--hint); font-size: 13px; line-height: 1.8; padding: 40px; }
     .dv-no-image svg { width: 48px; height: 48px; stroke: var(--border-strong); fill: none; stroke-width: 1.2; margin-bottom: 16px; }
     /* Fields panel */
-    .dv-fields-panel { flex: 1; overflow-y: auto; padding: 20px; }
+    .dv-fields-panel { flex: 1; overflow-y: auto; padding: 0; display: flex; flex-direction: column; }
+    .dv-doc-summary { padding: 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .dv-doc-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 10px; }
+    .dv-doc-title { font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; margin-bottom: 12px; }
+    .dv-doc-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .dv-meta-row { display: flex; gap: 8px; font-size: 12px; }
+    .dv-meta-key { color: var(--hint); width: 80px; flex-shrink: 0; }
+    .dv-meta-val { color: var(--text); font-weight: 500; }
+    .dv-doc-narrative { font-size: 13px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 12px; }
+    .dv-conf { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 99px; margin-top: 10px; }
+    .dv-conf-high { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+    .dv-conf-low { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); }
+    .dv-fields-scroll { flex: 1; overflow-y: auto; padding: 20px; }
     .dv-fields-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin-bottom: 14px; }
     .dv-field { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background .12s; margin-bottom: 4px; border: 1.5px solid transparent; }
     .dv-field:hover, .dv-field.hovered { background: var(--accent-light); }
@@ -618,6 +630,24 @@
     const backdrop = document.createElement('div');
     backdrop.id = 'dvBackdrop';
     backdrop.className = 'dv-backdrop';
+    // Build summary meta rows
+    const students = (r.students || []);
+    const studentNames = [...new Set(students.map(s => s.name).filter(Boolean))].join(', ') || null;
+    const metaRows = [
+      r.doc_type   && ['Document type', r.doc_type.replace(/_/g, ' ')],
+      studentNames && ['Student(s)', studentNames],
+      r.date       && ['Date recorded', r.date],
+      r.teacher    && ['Teacher', r.teacher],
+      r.class_group && ['Class / group', r.class_group],
+      r.subject    && ['Subject', r.subject],
+    ].filter(Boolean).map(([k, v]) =>
+      `<div class="dv-meta-row"><span class="dv-meta-key">${k}</span><span class="dv-meta-val">${v}</span></div>`
+    ).join('');
+    const conf = typeof r.confidence === 'number' ? r.confidence : null;
+    const confBadge = conf !== null
+      ? `<div><span class="dv-conf ${conf >= 75 ? 'dv-conf-high' : 'dv-conf-low'}">${conf}% extraction confidence</span></div>`
+      : '';
+
     backdrop.innerHTML = `
       <div class="dv-modal">
         <div class="dv-header">
@@ -637,8 +667,17 @@
             }
           </div>
           <div class="dv-fields-panel" id="dvFieldsPanel">
-            <div class="dv-fields-title">Extracted fields</div>
-            <div id="dvFieldList"></div>
+            <div class="dv-doc-summary">
+              <div class="dv-doc-type">${r.doc_type ? r.doc_type.replace(/_/g, ' ') : 'Document'}</div>
+              <div class="dv-doc-title">${r.summary || 'Captured document'}</div>
+              ${metaRows ? `<div class="dv-doc-meta">${metaRows}</div>` : ''}
+              ${r.free_text ? `<div class="dv-doc-narrative">${r.free_text.slice(0, 220)}${r.free_text.length > 220 ? '…' : ''}</div>` : ''}
+              ${confBadge}
+            </div>
+            <div class="dv-fields-scroll">
+              <div class="dv-fields-title">Extracted fields</div>
+              <div id="dvFieldList"></div>
+            </div>
           </div>
         </div>
       </div>`;
