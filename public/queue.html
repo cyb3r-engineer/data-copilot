@@ -150,6 +150,16 @@
     .link-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
     .link-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .link-row-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); }
+    .link-suggestion { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .link-suggestion-name { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .link-conf { font-size: 11px; font-weight: 600; border-radius: 99px; padding: 2px 8px; }
+    .match-high { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+    .match-mid { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-border); }
+    .match-low { color: var(--muted); background: var(--accent-light); border: 1px solid var(--border); }
+    .link-confirm-btn { padding: 4px 12px; border-radius: 99px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .link-confirm-btn:hover { background: #333; }
+    .link-conf-sep { color: var(--hint); font-size: 12px; }
+    .link-conf-change { font-size: 12px; color: var(--hint); }
     .linked-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .linked-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 99px; padding: 5px 8px 5px 13px; }
     .linked-chip button { background: none; border: none; color: var(--success); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; border-radius: 99px; }
@@ -563,14 +573,37 @@
     const flags = r.flags || [];
     const meta = [['Date', r.date], ['Teacher', r.teacher], ['Subject', r.subject], ['Class', r.class_group]].filter(([, v]) => v);
 
+    // Auto-detect primary student from extracted data
+    const extractedNames = students.map(s => s.name).filter(Boolean);
+    const nameCounts = {};
+    for (const n of extractedNames) nameCounts[n] = (nameCounts[n] || 0) + 1;
+    const primaryName = Object.keys(nameCounts).sort((a, b) => nameCounts[b] - nameCounts[a])[0] || null;
+    const autoMatch = primaryName ? fuzzyMatchStudent(primaryName) : null;
+    const alreadyLinked = getDocLinks().some(l => l.c === c.id && autoMatch && l.s === autoMatch.student?.id);
+    const pct = autoMatch ? Math.round(autoMatch.score * 100) : 0;
+    const matchCls = pct >= 80 ? 'match-high' : pct >= 60 ? 'match-mid' : 'match-low';
+
+    let suggestionHtml = '';
+    if (autoMatch && !alreadyLinked) {
+      suggestionHtml = `
+        <div class="link-suggestion" id="link-suggestion-${c.id}">
+          <div class="link-suggestion-name">${autoMatch.student.name}</div>
+          <span class="link-conf ${matchCls}">${pct}% match</span>
+          <button class="link-confirm-btn" onclick="linkDoc('${c.id}','${autoMatch.student.id}');document.getElementById('link-suggestion-${c.id}').style.display='none'">Confirm</button>
+          <span class="link-conf-sep">·</span>
+          <span class="link-conf-change">or change below</span>
+        </div>`;
+    }
+
     let body = `
       <div class="link-row">
         <div class="link-row-header">
           <span class="link-row-label">Linked students</span>
         </div>
+        ${suggestionHtml}
         <div class="linked-chips" id="linked-${c.id}">${linkedChips(c.id)}</div>
         <select class="link-select" onchange="linkDoc('${c.id}', this.value); this.value='';">
-          <option value="">+ Link a student…</option>
+          <option value="">+ Link another student…</option>
           ${(window.ROSTER || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
         </select>
       </div>`;
