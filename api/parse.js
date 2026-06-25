@@ -44,7 +44,7 @@ Rules:
 - If a score is present but the goal it belongs to is not on the document, set goal to null, still record the raw score, and add a flag noting the goal is unknown
 - Put every uncertainty in flags
 - confidence should honestly reflect image quality and how certain you are
-- For highlights: list every distinct piece of information you extracted as a separate entry. bbox is [ymin, xmin, ymax, xmax] as integers 0-1000 (where 0,0 is the top-left and 1000,1000 is the bottom-right of the image), pointing to exactly where on the image that text appears. If you genuinely cannot pinpoint a location, omit the bbox key for that entry but still include the highlight`;
+- For highlights: list every distinct piece of information you extracted as a separate entry. Use ONLY these label values: "Student name", "Goal", "Goal Progress", "Score", "Date", "Teacher", "Class group", "Notes". bbox is [ymin, xmin, ymax, xmax] as integers 0-1000 (where 0,0 is the top-left and 1000,1000 is the bottom-right of the image), pointing to exactly where on the image that text appears. If you genuinely cannot pinpoint a location, omit the bbox key for that entry but still include the highlight`;
 
 const SAMPLES = {
   assessment: 'A handwritten mark sheet for Year 4 maths. Headed "Fractions — 14/6 — MT". Six student rows: Jamie H 16/20, Sofia R 18/20, Tyler K 9/20 with a circle around the score, Amara O 14/20, Liam B 20/20 star next to it, Priya S score crossed out and rewritten as 12/20. Bottom note: "Tyler needs support — catch-up next Tue?"',

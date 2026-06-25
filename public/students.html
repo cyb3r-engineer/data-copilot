@@ -215,6 +215,29 @@
 
 <script src="/roster.js"></script>
 <script>
+  // Merge any progress logged from the review queue into ROSTER goal history
+  (function mergeProgressLog() {
+    try {
+      const logs = JSON.parse(localStorage.getItem('dc_progress_log') || '[]');
+      for (const entry of logs) {
+        const student = ROSTER.find(s => s.id === entry.studentId);
+        if (!student) continue;
+        const goal = (student.goals || []).find(g => g.id === entry.goalId);
+        if (!goal) continue;
+        if (!goal.history) goal.history = [];
+        const alreadyLogged = goal.history.some(h => h.date === entry.date && String(h.value) === String(parseFloat(entry.score)));
+        if (!alreadyLogged && entry.score) {
+          const num = parseFloat(entry.score);
+          if (!isNaN(num)) {
+            goal.history.push({ date: entry.date, value: num });
+            goal.history.sort((a, b) => a.date.localeCompare(b.date));
+            goal.current = num;
+          }
+        }
+      }
+    } catch (e) { /* silent */ }
+  })();
+
   function ini(name) {
     return (name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
   }
