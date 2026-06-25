@@ -10,11 +10,13 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { data, error } = await supabase
-      .from('captures')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const deviceId = new URL(req.url, 'http://x').searchParams.get('device_id');
+
+    let query = supabase.from('captures').select('*').order('created_at', { ascending: false }).limit(50);
+    if (deviceId) {
+      query = query.or(`source.eq.sample,source.eq.${deviceId}`);
+    }
+    const { data, error } = await query;
 
     if (error) throw error;
     res.status(200).json({ ok: true, captures: data });

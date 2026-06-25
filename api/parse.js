@@ -131,6 +131,7 @@ export default async function handler(req, res) {
     let geminiParts;
     let sampleKey = null;
     let glossaryText = '';
+    let deviceId = null;
 
     // Build a glossary block from teacher-specific shorthand, if provided
     const buildGlossary = raw => {
@@ -149,6 +150,7 @@ export default async function handler(req, res) {
       const parts = parseMultipart(rawBody, boundary);
 
       glossaryText = buildGlossary(parts.glossary);
+      deviceId = parts.device_id || null;
 
       if (parts.image?.data) {
         const base64 = parts.image.data.toString('base64');
@@ -187,7 +189,7 @@ export default async function handler(req, res) {
         summary: parsed.summary,
         result_json: parsed,
         status: parsed.flags?.length ? 'needs_review' : 'ready',
-        source: sampleKey ? 'sample' : 'upload'
+        source: sampleKey ? 'sample' : (deviceId || 'upload')
       })
       .select('id')
       .single();

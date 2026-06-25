@@ -280,6 +280,12 @@
   const hour = new Date().getHours();
   document.getElementById('timeOfDay').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
+  function getDeviceId() {
+    let id = localStorage.getItem('dc_device_id');
+    if (!id) { id = 'dc_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); localStorage.setItem('dc_device_id', id); }
+    return id;
+  }
+
   function timeAgo(ts) {
     const diff = Date.now() - new Date(ts);
     const m = Math.floor(diff / 60000);
@@ -312,7 +318,7 @@
 
   async function load() {
     try {
-      const res = await fetch('/api/queue');
+      const res = await fetch('/api/queue?device_id=' + getDeviceId());
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       const captures = data.captures || [];
@@ -453,6 +459,7 @@
     const thumb = await createThumbnail(file);
     const fd = new FormData();
     fd.append('image', file);
+    fd.append('device_id', getDeviceId());
     const glossary = getGlossary();
     if (glossary.length) fd.append('glossary', JSON.stringify(glossary));
     const res = await fetch('/api/parse', { method: 'POST', body: fd });
