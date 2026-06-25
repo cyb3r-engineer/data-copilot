@@ -126,9 +126,8 @@
     .student-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 3px; font-style: italic; }
     .student-entries { display: flex; flex-direction: column; gap: 0; margin-top: 8px; border-left: 2px solid var(--border); padding-left: 10px; margin-left: 2px; }
     .student-entry { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; }
-    .entry-score { font-size: 12px; font-weight: 600; color: var(--text); background: var(--accent-light); border-radius: 6px; padding: 2px 8px; flex-shrink: 0; min-width: 44px; text-align: center; position: relative; cursor: default; }
-    .entry-score[data-date]:hover::after { content: attr(data-date); position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); font-size: 11px; font-weight: 400; white-space: nowrap; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 10; }
-    .entry-score[data-date]:hover::before { content: ''; position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: var(--text); pointer-events: none; z-index: 10; }
+    .entry-score { font-size: 12px; font-weight: 600; color: var(--text); background: var(--accent-light); border-radius: 6px; padding: 2px 8px; flex-shrink: 0; min-width: 44px; text-align: center; }
+    .entry-date { font-size: 11px; color: var(--hint); flex-shrink: 0; }
     .entry-note { font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.5; }
     .flag-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .flag-card { border: 1px solid #e4d3b8; background: #fdf9f1; border-radius: 8px; padding: 11px 12px; transition: all .15s; }
@@ -602,8 +601,8 @@
             const val = e.score || e.goal_progress || '';
             const date = e.date || r.date || '';
             const noteHtml = e.note ? `<span class="entry-note">${e.note}</span>` : '';
-            const dateAttr = date ? ` data-date="${date}"` : '';
-            entriesHtml += `<div class="student-entry">${val ? `<span class="entry-score"${dateAttr}>${val}</span>` : ''}${noteHtml}</div>`;
+            const dateHtml = date ? `<span class="entry-date">${date}</span>` : '';
+            entriesHtml += `<div class="student-entry">${val ? `<span class="entry-score">${val}</span>` : ''}${dateHtml}${noteHtml}</div>`;
           }
           entriesHtml += `</div>`;
         } else {
