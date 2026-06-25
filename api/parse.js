@@ -24,6 +24,7 @@ Respond ONLY with a valid JSON object: no preamble, no markdown fences, nothing 
   "students": [
     {
       "name": "<student name as written>",
+      "date": "<the date this specific entry was recorded if the document shows per-row or per-session dates, else null>",
       "goal": "<the specific goal or target this student's data relates to, quoted from the document if present, else null>",
       "goal_progress": "<progress toward that goal in the goal's own terms, e.g. '67/100 sight words', '3 of 5 prompts', '80% accuracy', else null>",
       "score": "<raw score, grade or mark exactly as written, else null>",
