@@ -124,6 +124,10 @@
     .student-progress { font-size: 12px; color: var(--muted); margin-top: 3px; }
     .student-progress strong { color: var(--text); font-weight: 600; }
     .student-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 3px; font-style: italic; }
+    .student-entries { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .student-entry { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted); }
+    .entry-score { font-size: 12px; font-weight: 600; color: var(--text); background: var(--accent-light); border-radius: 6px; padding: 1px 7px; flex-shrink: 0; }
+    .entry-note { font-style: italic; }
     .flag-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .flag-card { border: 1px solid #e4d3b8; background: #fdf9f1; border-radius: 8px; padding: 11px 12px; transition: all .15s; }
     .flag-card.resolved { border-color: #bfe0cc; background: #f3faf5; }
@@ -536,21 +540,53 @@
     }
 
     if (students.length) {
-      body += `<div class="section-label">Students (${students.length})</div><div class="student-list">`;
+      // Group by student name + goal so repeated date-entries collapse into one row
+      const groups = [];
+      const keyMap = {};
       for (const s of students) {
-        const goalLine = s.goal
-          ? `<div class="student-goal"><span class="goal-tag">Goal</span>${s.goal}</div>`
-          : (s.score || s.goal_progress)
+        const key = (s.name || '') + '|' + (s.goal || '');
+        if (keyMap[key] !== undefined) {
+          groups[keyMap[key]].entries.push(s);
+        } else {
+          keyMap[key] = groups.length;
+          groups.push({ name: s.name, goal: s.goal, entries: [s] });
+        }
+      }
+      const uniqueStudents = new Set(groups.map(g => g.name)).size;
+      body += `<div class="section-label">Students (${uniqueStudents})</div><div class="student-list">`;
+      for (const g of groups) {
+        const multi = g.entries.length > 1;
+        const first = g.entries[0];
+        const goalLine = g.goal
+          ? `<div class="student-goal"><span class="goal-tag">Goal</span>${g.goal}</div>`
+          : (first.score || first.goal_progress)
             ? `<div class="student-goal missing"><span class="goal-tag missing">No goal</span>Score recorded without a goal to interpret it against</div>`
             : '';
-        const progressLine = s.goal_progress ? `<div class="student-progress">Progress: <strong>${s.goal_progress}</strong></div>` : '';
-        const noteLine = s.note ? `<div class="student-note">${s.note}</div>` : '';
+
+        let entriesHtml = '';
+        if (multi) {
+          entriesHtml = `<div class="student-entries">`;
+          for (const e of g.entries) {
+            const val = e.score || e.goal_progress || '';
+            const noteHtml = e.note ? `<span class="entry-note">${e.note}</span>` : '';
+            entriesHtml += `<div class="student-entry">${val ? `<span class="entry-score">${val}</span>` : ''}${noteHtml}</div>`;
+          }
+          entriesHtml += `</div>`;
+        } else {
+          const progressLine = first.goal_progress ? `<div class="student-progress">Progress: <strong>${first.goal_progress}</strong></div>` : '';
+          const noteLine = first.note ? `<div class="student-note">${first.note}</div>` : '';
+          entriesHtml = progressLine + noteLine;
+        }
+
         body += `
           <div class="student-row">
-            <div class="avatar">${ini(s.name)}</div>
+            <div class="avatar">${ini(g.name)}</div>
             <div class="student-main">
-              <div class="student-head"><span class="student-name">${s.name}</span>${s.score ? `<span class="student-score">${s.score}</span>` : ''}</div>
-              ${goalLine}${progressLine}${noteLine}
+              <div class="student-head">
+                <span class="student-name">${g.name}</span>
+                ${!multi && first.score ? `<span class="student-score">${first.score}</span>` : ''}
+              </div>
+              ${goalLine}${entriesHtml}
             </div>
           </div>`;
       }
