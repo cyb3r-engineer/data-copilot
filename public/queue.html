@@ -215,7 +215,11 @@
     /* Inline log-to-record section */
     .log-section { margin-top: 20px; }
     .log-block { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: var(--surface); }
-    .log-block-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .log-block-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .log-block-name { font-size: 13px; font-weight: 600; }
+    .log-block-goal { font-size: 11px; color: var(--muted); }
+    .log-score-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .log-chip { font-size: 11px; font-weight: 600; color: var(--text); background: var(--accent-light); border-radius: 6px; padding: 2px 8px; }
     .log-match-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; background: var(--accent-light); border-radius: 6px; padding: 2px 7px; margin-bottom: 10px; color: var(--muted); }
     .log-match-badge.good { color: var(--success); }
     .log-match-badge.weak { color: var(--warn); }
@@ -372,59 +376,85 @@
     const students = r.students || [];
     if (!students.length) return '';
 
+    // Group by name + goal (same logic as display section)
+    const groups = [];
+    const keyMap = {};
+    for (const s of students) {
+      const key = (s.name || '') + '|' + (s.goal || '');
+      if (keyMap[key] !== undefined) {
+        groups[keyMap[key]].entries.push(s);
+      } else {
+        keyMap[key] = groups.length;
+        groups.push({ name: s.name, goal: s.goal, entries: [s] });
+      }
+    }
+
+    const docDate = r.date ? r.date.replace(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/, '$3-$2-$1').replace(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/, '$1-$2-$3') : '2026-06-25';
     let html = `<div class="log-section"><div class="section-label">Log to student records</div>`;
 
-    students.forEach((s, si) => {
-      const matchResult = fuzzyMatchStudent(s.name);
+    groups.forEach((g, gi) => {
+      const matchResult = fuzzyMatchStudent(g.name);
       const matchedStudent = matchResult?.student;
       const confidence = matchResult?.score || 0;
       const matchClass = confidence >= 0.67 ? 'good' : 'weak';
-      const extractedText = (s.goal || '') + ' ' + (s.goal_progress || '');
-      const dateVal = r.date ? r.date.replace(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/, '$3-$2-$1').replace(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/, '$1-$2-$3') : '2026-06-25';
+      const extractedText = (g.goal || '') + ' ' + (g.entries[0]?.goal_progress || '');
+      const multi = g.entries.length > 1;
 
       const rosterOptions = (window.ROSTER || []).map(rs =>
         `<option value="${rs.id}"${matchedStudent?.id === rs.id ? ' selected' : ''}>${rs.name}</option>`
       ).join('');
 
+      // Score chips preview for multi-entry groups
+      const scoreChips = multi
+        ? `<div class="log-field"><div class="log-field-label">Entries to log (${g.entries.length})</div><div class="log-score-chips">${
+            g.entries.map(e => `<span class="log-chip">${e.score || e.goal_progress || '—'}</span>`).join('')
+          }</div></div>`
+        : `<div class="log-field"><div class="log-field-label">Score / progress</div>
+           <input class="log-input" id="log-score-${c.id}-${gi}" type="text"
+             value="${(g.entries[0].score || g.entries[0].goal_progress || '').replace(/"/g, '&quot;')}"
+             placeholder="e.g. 14/20"></div>`;
+
+      const lastNote = [...g.entries].reverse().find(e => e.note)?.note || '';
+
       html += `
-        <div class="log-block" id="log-block-${c.id}-${si}">
-          <div class="log-block-name">${s.name || 'Student ' + (si + 1)}</div>
-          ${confidence > 0 ? `<div class="log-match-badge ${matchClass}">Auto-matched: ${matchedStudent.name} · ${Math.round(confidence * 100)}%</div>` : ''}
-          <div class="log-field">
-            <div class="log-field-label">Student in records</div>
-            <select class="log-select" id="log-student-${c.id}-${si}"
-              onchange="updateLogGoals('${c.id}',${si},this.value,${JSON.stringify(extractedText)})">
-              <option value="">— select student —</option>
-              ${rosterOptions}
-            </select>
+        <div class="log-block" id="log-block-${c.id}-${gi}">
+          <div class="log-block-header">
+            <span class="log-block-name">${g.name || 'Student'}</span>
+            ${g.goal ? `<span class="log-block-goal">${g.goal}</span>` : ''}
           </div>
-          <div class="log-field">
-            <div class="log-field-label">Goal</div>
-            <select class="log-select" id="log-goal-${c.id}-${si}">
-              ${goalOptionsHtml(matchedStudent, extractedText)}
-            </select>
-          </div>
+          ${confidence > 0 ? `<div class="log-match-badge ${matchClass}">Matched: ${matchedStudent.name} · ${Math.round(confidence * 100)}%</div>` : ''}
           <div class="log-row">
             <div class="log-field">
-              <div class="log-field-label">Score / progress</div>
-              <input class="log-input" id="log-score-${c.id}-${si}" type="text"
-                value="${(s.score || s.goal_progress || '').replace(/"/g, '&quot;')}"
-                placeholder="e.g. 14/20">
+              <div class="log-field-label">Student in records</div>
+              <select class="log-select" id="log-student-${c.id}-${gi}"
+                onchange="updateLogGoals('${c.id}',${gi},this.value,${JSON.stringify(extractedText)})">
+                <option value="">— select student —</option>
+                ${rosterOptions}
+              </select>
             </div>
             <div class="log-field">
-              <div class="log-field-label">Date</div>
-              <input class="log-input" id="log-date-${c.id}-${si}" type="date" value="${dateVal}">
+              <div class="log-field-label">Goal</div>
+              <select class="log-select" id="log-goal-${c.id}-${gi}">
+                ${goalOptionsHtml(matchedStudent, extractedText)}
+              </select>
             </div>
           </div>
-          <div class="log-field">
-            <div class="log-field-label">Note</div>
-            <input class="log-input" id="log-note-${c.id}-${si}" type="text"
-              value="${(s.note || '').replace(/"/g, '&quot;')}"
-              placeholder="Optional observation…">
+          ${scoreChips}
+          <div class="log-row">
+            ${!multi ? `<div class="log-field"><div class="log-field-label">Date</div>
+              <input class="log-input" id="log-date-${c.id}-${gi}" type="date" value="${docDate}"></div>` : ''}
+            <div class="log-field">
+              <div class="log-field-label">Note</div>
+              <input class="log-input" id="log-note-${c.id}-${gi}" type="text"
+                value="${lastNote.replace(/"/g, '&quot;')}" placeholder="Optional observation…">
+            </div>
           </div>
           <div class="log-actions">
-            <button class="log-btn" id="log-btn-${c.id}-${si}" onclick="logProgress('${c.id}',${si})">Log progress</button>
-            <span class="log-ok" id="log-ok-${c.id}-${si}">✓ Progress logged</span>
+            <button class="log-btn" id="log-btn-${c.id}-${gi}"
+              onclick="logProgress('${c.id}',${gi},${JSON.stringify(g.entries.map(e => ({ score: e.score || e.goal_progress || '', date: e.date || docDate, note: e.note || '' })))})">
+              ${multi ? `Log all ${g.entries.length} entries` : 'Log progress'}
+            </button>
+            <span class="log-ok" id="log-ok-${c.id}-${gi}">✓ Logged</span>
           </div>
         </div>`;
     });
@@ -433,43 +463,43 @@
     return html;
   }
 
-  function updateLogGoals(captureId, si, studentId, extractedText) {
+  function updateLogGoals(captureId, gi, studentId, extractedText) {
     const student = (window.ROSTER || []).find(s => s.id === studentId);
-    const sel = document.getElementById(`log-goal-${captureId}-${si}`);
+    const sel = document.getElementById(`log-goal-${captureId}-${gi}`);
     if (sel) sel.innerHTML = goalOptionsHtml(student, extractedText);
   }
 
-  function logProgress(captureId, si) {
-    const studentId = document.getElementById(`log-student-${captureId}-${si}`)?.value;
-    const goalId = document.getElementById(`log-goal-${captureId}-${si}`)?.value;
-    const score = document.getElementById(`log-score-${captureId}-${si}`)?.value?.trim() || '';
-    const date = document.getElementById(`log-date-${captureId}-${si}`)?.value || '';
-    const note = document.getElementById(`log-note-${captureId}-${si}`)?.value?.trim() || '';
+  function logProgress(captureId, gi, entries) {
+    const studentId = document.getElementById(`log-student-${captureId}-${gi}`)?.value;
+    const goalId = document.getElementById(`log-goal-${captureId}-${gi}`)?.value;
+    const noteOverride = document.getElementById(`log-note-${captureId}-${gi}`)?.value?.trim() || '';
 
     if (!studentId) { alert('Please select a student.'); return; }
     if (!goalId) { alert('Please select a goal.'); return; }
 
     const student = (window.ROSTER || []).find(s => s.id === studentId);
     const goal = student?.goals?.find(g => g.id === goalId);
-
-    // Persist to localStorage log
     const logs = JSON.parse(localStorage.getItem('dc_progress_log') || '[]');
-    logs.push({ captureId, studentId, goalId, goalText: goal?.text || '', score, date, note, loggedAt: new Date().toISOString() });
-    localStorage.setItem('dc_progress_log', JSON.stringify(logs));
 
-    // Update ROSTER in memory so students.html picks it up in this session
-    if (goal && score) {
-      const num = parseFloat(score);
-      if (!isNaN(num)) {
-        goal.current = num;
-        if (!goal.history) goal.history = [];
-        goal.history.push({ date, value: num });
+    for (const e of entries) {
+      const score = e.score;
+      const date = e.date;
+      const note = noteOverride || e.note || '';
+      logs.push({ captureId, studentId, goalId, goalText: goal?.text || '', score, date, note, loggedAt: new Date().toISOString() });
+      if (goal && score) {
+        const num = parseFloat(score);
+        if (!isNaN(num)) {
+          goal.current = num;
+          if (!goal.history) goal.history = [];
+          goal.history.push({ date, value: num });
+        }
       }
     }
+    localStorage.setItem('dc_progress_log', JSON.stringify(logs));
 
-    const btn = document.getElementById(`log-btn-${captureId}-${si}`);
+    const btn = document.getElementById(`log-btn-${captureId}-${gi}`);
     if (btn) { btn.textContent = 'Logged ✓'; btn.disabled = true; }
-    const ok = document.getElementById(`log-ok-${captureId}-${si}`);
+    const ok = document.getElementById(`log-ok-${captureId}-${gi}`);
     if (ok) ok.style.display = 'inline';
   }
 
