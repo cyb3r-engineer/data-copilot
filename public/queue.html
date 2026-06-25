@@ -584,15 +584,27 @@
     const matchCls = pct >= 80 ? 'match-high' : pct >= 60 ? 'match-mid' : 'match-low';
 
     let suggestionHtml = '';
-    if (autoMatch && !alreadyLinked) {
-      suggestionHtml = `
-        <div class="link-suggestion" id="link-suggestion-${c.id}">
-          <div class="link-suggestion-name">${autoMatch.student.name}</div>
-          <span class="link-conf ${matchCls}">${pct}% match</span>
-          <button class="link-confirm-btn" onclick="linkDoc('${c.id}','${autoMatch.student.id}');document.getElementById('link-suggestion-${c.id}').style.display='none'">Confirm</button>
-          <span class="link-conf-sep">·</span>
-          <span class="link-conf-change">or change below</span>
-        </div>`;
+    if (primaryName) {
+      if (autoMatch && !alreadyLinked) {
+        suggestionHtml = `
+          <div class="link-suggestion" id="link-suggestion-${c.id}">
+            <div class="link-suggestion-name">${primaryName}</div>
+            <span class="link-conf ${matchCls}">${pct}% match — ${autoMatch.student.name}</span>
+            <button class="link-confirm-btn" onclick="linkDoc('${c.id}','${autoMatch.student.id}');document.getElementById('link-suggestion-${c.id}').style.display='none'">Confirm</button>
+            <span class="link-conf-change">or change below</span>
+          </div>`;
+      } else if (!alreadyLinked) {
+        suggestionHtml = `
+          <div class="link-suggestion" id="link-suggestion-${c.id}">
+            <div class="link-suggestion-name">${primaryName}</div>
+            <span class="link-conf match-low">Not in records — link below</span>
+          </div>`;
+      } else {
+        suggestionHtml = `
+          <div class="link-suggestion">
+            <div class="link-suggestion-name">${primaryName}</div>
+          </div>`;
+      }
     }
 
     let body = `
