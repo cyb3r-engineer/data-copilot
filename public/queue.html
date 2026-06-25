@@ -147,12 +147,14 @@
     .flag-edit-btn:hover { border-color: var(--border-strong); color: var(--text); }
     .note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--sans); font-size: 13px; color: var(--text); resize: vertical; min-height: 64px; margin-bottom: 12px; }
     .note-input:focus { outline: none; border-color: var(--border-strong); }
-    .link-row { margin-top: 16px; }
+    .link-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    .link-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .link-row-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); }
     .linked-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-    .linked-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 99px; padding: 4px 6px 4px 11px; }
-    .linked-chip button { background: none; border: none; color: var(--success); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 99px; }
+    .linked-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 99px; padding: 5px 8px 5px 13px; }
+    .linked-chip button { background: none; border: none; color: var(--success); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; border-radius: 99px; }
     .linked-chip button:hover { color: var(--danger); }
-    .link-select { font-family: var(--sans); font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+    .link-select { font-family: var(--sans); font-size: 13px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; cursor: pointer; width: 100%; }
     .link-select:focus { outline: none; border-color: var(--border-strong); }
     .card-actions { display: flex; gap: 8px; margin-top: 16px; }
     .card-btn { padding: 8px 16px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
@@ -561,7 +563,18 @@
     const flags = r.flags || [];
     const meta = [['Date', r.date], ['Teacher', r.teacher], ['Subject', r.subject], ['Class', r.class_group]].filter(([, v]) => v);
 
-    let body = '';
+    let body = `
+      <div class="link-row">
+        <div class="link-row-header">
+          <span class="link-row-label">Linked students</span>
+        </div>
+        <div class="linked-chips" id="linked-${c.id}">${linkedChips(c.id)}</div>
+        <select class="link-select" onchange="linkDoc('${c.id}', this.value); this.value='';">
+          <option value="">+ Link a student…</option>
+          ${(window.ROSTER || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+        </select>
+      </div>`;
+
     if (r.summary) body += `<div class="row-summary-text">${r.summary}</div>`;
 
     if (meta.length) {
@@ -643,14 +656,6 @@
     body += buildLogSection(c);
 
     body += `
-      <div class="link-row">
-        <div class="section-label">Linked students</div>
-        <div class="linked-chips" id="linked-${c.id}">${linkedChips(c.id)}</div>
-        <select class="link-select" onchange="linkDoc('${c.id}', this.value); this.value='';">
-          <option value="">+ Link a student…</option>
-          ${(window.ROSTER || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-        </select>
-      </div>
       <div class="section-label" style="margin-top:16px">Teacher note</div>
       <textarea class="note-input" id="note-${c.id}" placeholder="Add a note before approving…">${c.teacher_note || ''}</textarea>
       <div class="card-actions">
