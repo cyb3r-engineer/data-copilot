@@ -4,5 +4,8 @@
   "description": "Teacher data capture co-pilot — Vercel + Supabase + Gemini",
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0"
+  },
+  "devDependencies": {
+    "@everway/design-system-mcp": "^0.7.0"
   }
 }

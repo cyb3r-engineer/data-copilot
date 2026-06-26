@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "everway-design-system": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@everway/design-system-mcp"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    }
+  }
+}
