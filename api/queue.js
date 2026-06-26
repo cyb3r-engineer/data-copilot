@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     let query = supabase.from('captures').select('*').order('created_at', { ascending: false }).limit(50);
     if (deviceId) {
-      query = query.or(`source.eq.sample,source.eq.${deviceId}`);
+      query = query.in('source', ['sample', deviceId]);
     }
     const { data, error } = await query;
 
