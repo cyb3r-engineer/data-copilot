@@ -222,6 +222,26 @@
     .dv-field-value { font-size: 13px; color: var(--text); line-height: 1.45; }
     .dv-field.no-bbox { opacity: .6; cursor: default; }
     .dv-section-sep { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--hint); margin: 14px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+    /* Grouped highlights */
+    .dv-doc-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .dv-strip-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; background: var(--accent-light); border-radius: 6px; padding: 4px 9px; border: 1px solid var(--border); cursor: pointer; transition: border-color .12s, background .12s; }
+    .dv-strip-chip:hover { background: var(--border); }
+    .dv-strip-chip.active { border-color: var(--border-strong); background: var(--border); }
+    .dv-strip-key { color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+    .dv-strip-val { color: var(--text); font-weight: 500; }
+    .dv-sg { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .dv-sg-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .dv-sg-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .dv-sg-goal { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+    .dv-sg-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+    .dv-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; font-family: var(--sans); transition: border-color .12s, background .12s; position: relative; }
+    .dv-chip:hover { border-color: var(--border-strong); background: var(--accent-light); }
+    .dv-chip.active { border-color: currentColor; background: var(--accent-light); }
+    .dv-chip.no-bbox { opacity: .6; cursor: default; }
+    .dv-chip-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); }
+    .dv-chip-val { font-size: 12px; font-weight: 600; color: var(--text); }
+    .dv-goal-tag { position: absolute; bottom: calc(100% + 6px); left: 0; right: 0; background: var(--text); color: var(--surface); font-size: 10px; line-height: 1.4; padding: 5px 8px; border-radius: 6px; white-space: normal; pointer-events: none; z-index: 10; display: none; min-width: 160px; max-width: 240px; }
+    .dv-chip:hover .dv-goal-tag { display: block; }
 
     /* Inline log-to-record section */
     .log-section { margin-top: 20px; }
@@ -979,33 +999,115 @@
     document.addEventListener('keydown', escHandler);
     backdrop._escHandler = escHandler;
 
-    // Render field list with bidirectional hover
+    // Render grouped highlights
     const fieldList = document.getElementById('dvFieldList');
     const hasBbox = highlights.some(h => h.bbox && h.bbox.length === 4);
+    const usedIdx = new Set();
 
-    highlights.forEach((h, i) => {
-      const color = HIGHLIGHT_COLORS[i % HIGHLIGHT_COLORS.length];
-      const hasBb = !!(h.bbox && h.bbox.length === 4);
-      const div = document.createElement('div');
-      div.className = 'dv-field' + (hasBb ? '' : ' no-bbox');
-      div.dataset.index = i;
-      div.style.color = color;
-      div.innerHTML = `
-        <div class="dv-dot" style="background:${color}"></div>
-        <div class="dv-field-body">
-          <div class="dv-field-label">${h.label}</div>
-          <div class="dv-field-value">${h.value || '—'}</div>
-        </div>`;
-      if (hasBb) {
-        // field hover → highlight rect on image
-        div.addEventListener('mouseenter', () => setRectState(i, 'hover', highlights));
-        div.addEventListener('mouseleave', () => {
-          if (!div.classList.contains('active')) setRectState(i, 'default', highlights);
-        });
-        div.addEventListener('click', () => lockField(i, highlights, color));
+    function findHlIdx(label, value) {
+      for (let i = 0; i < highlights.length; i++) {
+        if (!usedIdx.has(i) && highlights[i].label === label && highlights[i].value === value) {
+          usedIdx.add(i); return i;
+        }
       }
-      fieldList.appendChild(div);
+      // fallback: match by value only
+      for (let i = 0; i < highlights.length; i++) {
+        if (!usedIdx.has(i) && highlights[i].value === value) {
+          usedIdx.add(i); return i;
+        }
+      }
+      return -1;
+    }
+
+    function makeChipEl(label, value, hlIdx, goalText, color) {
+      const hasBb = hlIdx >= 0 && !!(highlights[hlIdx]?.bbox?.length === 4);
+      const el = document.createElement('button');
+      el.className = 'dv-chip' + (hasBb ? '' : ' no-bbox');
+      el.dataset.index = hlIdx;
+      if (color) el.style.color = color;
+      el.innerHTML = `
+        <span class="dv-chip-label">${label}</span>
+        <span class="dv-chip-val">${value || '—'}</span>
+        ${goalText ? `<span class="dv-goal-tag">Goal: ${goalText}</span>` : ''}`;
+      if (hasBb) {
+        el.addEventListener('mouseenter', () => setRectState(hlIdx, 'hover', highlights));
+        el.addEventListener('mouseleave', () => {
+          if (!el.classList.contains('active')) setRectState(hlIdx, 'default', highlights);
+        });
+        el.addEventListener('click', () => lockField(hlIdx, highlights, color));
+      }
+      return el;
+    }
+
+    // Doc-level strip: Date, Teacher, Class group
+    const docLevelLabels = ['Date', 'Teacher', 'Class group'];
+    const strip = document.createElement('div');
+    strip.className = 'dv-doc-strip';
+    docLevelLabels.forEach(lbl => {
+      const h = highlights.find((h, i) => h.label === lbl && !usedIdx.has(i));
+      if (!h) return;
+      const idx = highlights.indexOf(h);
+      usedIdx.add(idx);
+      const hasBb = !!(h.bbox?.length === 4);
+      const color = HIGHLIGHT_COLORS[idx % HIGHLIGHT_COLORS.length];
+      const chip = document.createElement('span');
+      chip.className = 'dv-strip-chip' + (hasBb ? '' : '');
+      chip.dataset.index = idx;
+      chip.innerHTML = `<span class="dv-strip-key">${lbl}</span><span class="dv-strip-val">${h.value}</span>`;
+      if (hasBb) {
+        chip.addEventListener('mouseenter', () => setRectState(idx, 'hover', highlights));
+        chip.addEventListener('mouseleave', () => { if (!chip.classList.contains('active')) setRectState(idx, 'default', highlights); });
+        chip.addEventListener('click', () => lockField(idx, highlights, color));
+      }
+      strip.appendChild(chip);
     });
+    if (strip.children.length) fieldList.appendChild(strip);
+
+    // Student groups
+    const students = r.students || [];
+    if (students.length) {
+      students.forEach((s, si) => {
+        const color = HIGHLIGHT_COLORS[si % HIGHLIGHT_COLORS.length];
+        const sg = document.createElement('div');
+        sg.className = 'dv-sg';
+
+        const hdr = document.createElement('div');
+        hdr.className = 'dv-sg-header';
+        hdr.innerHTML = `<span class="dv-sg-name">${s.name || 'Unknown student'}</span>`
+          + (s.goal ? `<span class="dv-sg-goal">${s.goal}</span>` : '');
+        sg.appendChild(hdr);
+
+        const chipsRow = document.createElement('div');
+        chipsRow.className = 'dv-sg-chips';
+
+        const fieldDefs = [
+          ['Score',         s.score,         'Score'],
+          ['Goal Progress', s.goal_progress,  'Goal Progress'],
+          ['Date',          s.date,           'Date'],
+          ['Notes',         s.note,           'Notes'],
+        ];
+        fieldDefs.forEach(([label, value, hlLabel]) => {
+          if (!value) return;
+          const idx = findHlIdx(hlLabel, value);
+          const chip = makeChipEl(label, value, idx, s.goal, color);
+          chipsRow.appendChild(chip);
+        });
+
+        if (!chipsRow.children.length) {
+          chipsRow.innerHTML = `<span style="font-size:11px;color:var(--hint)">No data extracted for this student.</span>`;
+        }
+        sg.appendChild(chipsRow);
+        fieldList.appendChild(sg);
+      });
+    } else {
+      // Fallback: render remaining highlights flat
+      highlights.forEach((h, i) => {
+        if (usedIdx.has(i)) return;
+        const color = HIGHLIGHT_COLORS[i % HIGHLIGHT_COLORS.length];
+        const chip = makeChipEl(h.label, h.value, i, null, color);
+        fieldList.appendChild(chip);
+      });
+    }
 
     if (!hasBbox) {
       const note = document.createElement('div');
