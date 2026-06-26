@@ -335,14 +335,20 @@
   }
 
   async function loadQueue() {
+    const ql = document.getElementById('queueList');
     try {
-      const res = await fetch('/api/queue?device_id=' + getDeviceId());
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch('/api/queue?device_id=' + getDeviceId(), { signal: controller.signal });
+      clearTimeout(timer);
+      let data;
+      try { data = await res.json(); } catch(je) { throw new Error(`API returned non-JSON (status ${res.status})`); }
+      if (!data.ok) throw new Error(data.error || 'Unknown API error');
       allCaptures = data.captures || [];
       renderQueue();
     } catch(e) {
-      document.getElementById('queueList').innerHTML = `<div class="empty-state" style="color:var(--danger)">${e.message}</div>`;
+      const msg = e.name === 'AbortError' ? 'Request timed out — check your connection.' : (e.message || String(e));
+      ql.innerHTML = `<div class="empty-state" style="color:var(--danger);font-size:13px;">Could not load queue: ${msg}</div>`;
     }
   }
 
