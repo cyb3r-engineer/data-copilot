@@ -97,6 +97,23 @@
     .stale-age { font-size: 11px; color: var(--warn); font-weight: 500; flex-shrink: 0; }
     .stale-empty { font-size: 13px; color: var(--success); display: flex; align-items: center; gap: 8px; padding: 10px 0; }
 
+    /* Milestone / alert rows */
+    --success-bg: #f3faf5; --success-border: #bfe0cc; --warn-bg: #fdf9f1; --warn-border: #e4d3b8;
+    .alert-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .alert-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border-radius: 10px; text-decoration: none; color: inherit; transition: opacity .15s; }
+    .alert-row:hover { opacity: .75; }
+    .alert-row.is-met { border: 1px solid var(--success-border); }
+    .alert-row.is-reg { border: 1px solid var(--warn-border); }
+    .alert-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+    .alert-row.is-met .alert-icon { background: var(--success-bg); border: 1px solid var(--success-border); }
+    .alert-row.is-reg .alert-icon { background: var(--warn-bg); border: 1px solid var(--warn-border); }
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-name { font-size: 13px; font-weight: 500; }
+    .alert-goal { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-badge { font-size: 11px; font-weight: 500; flex-shrink: 0; }
+    .alert-row.is-met .alert-badge { color: var(--success); }
+    .alert-row.is-reg .alert-badge { color: var(--warn); }
+
     /* Type breakdown */
     .type-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .type-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; font-size: 13px; }
@@ -249,6 +266,14 @@
       <a class="section-link" href="/students.html">View students →</a>
     </div>
     <div id="staleList"></div>
+  </div>
+
+  <div class="section" id="alertsSection" style="display:none">
+    <div class="section-header">
+      <span class="section-label">Milestones &amp; alerts</span>
+      <a class="section-link" href="/students.html">View students →</a>
+    </div>
+    <div id="alertsList"></div>
   </div>
 
   <div class="section" id="attentionSection">
@@ -545,6 +570,51 @@
   }
 </script>
 <script src="/roster.js"></script>
-<script>renderStaleGoals();</script>
+<script>
+  renderStaleGoals();
+
+  function renderGoalAlerts() {
+    if (!window.ROSTER) return;
+    const alerts = [];
+    const lowerBetter = unit => /prompt/i.test(unit);
+    for (const student of window.ROSTER) {
+      for (const g of (student.goals || [])) {
+        const lb = lowerBetter(g.unit);
+        // Goal hit
+        const met = lb ? g.current <= g.target : g.current >= g.target;
+        if (met) {
+          alerts.push({ student, g, type: 'met' });
+          continue;
+        }
+        // Regression: last 2 history values
+        const hist = (g.history || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+        if (hist.length >= 2) {
+          const prev = hist[hist.length - 2].value;
+          const last = hist[hist.length - 1].value;
+          const regressed = lb ? (last > prev * 1.15) : (last < prev * 0.85);
+          if (regressed) alerts.push({ student, g, type: 'reg' });
+        }
+      }
+      if (alerts.length >= 5) break;
+    }
+    const shown = alerts.slice(0, 5);
+    const section = document.getElementById('alertsSection');
+    const el = document.getElementById('alertsList');
+    if (!section || !el) return;
+    if (!shown.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    el.innerHTML = `<div class="alert-list">${shown.map(({ student, g, type }) => `
+      <a class="alert-row is-${type}" href="/students.html#${student.id}">
+        <div class="alert-icon">${type === 'met' ? '✓' : '↓'}</div>
+        <div class="alert-body">
+          <div class="alert-name">${student.name}</div>
+          <div class="alert-goal">${g.text}</div>
+        </div>
+        <div class="alert-badge">${type === 'met' ? 'Target met' : 'Regression'}</div>
+      </a>`).join('')}
+    </div>`;
+  }
+  renderGoalAlerts();
+</script>
 </body>
 </html>
